@@ -559,7 +559,7 @@ export const commands: Chat.Commands = {
   exphelp(target, room, user) {
     if (!this.runBroadcast()) return;
     this.sendReplyBox(
-      `<div><b><center>EXP System Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
+      `<div><b><center>EXP System Commands By ${Impulse.nameColor('Prince Sky', true, false)}</center></b><br>` +
       `<ul>` +
       `<li><code>/level [user]</code> (Or <code>/exp</code>) - Check your or another user's EXP, current level, and EXP needed for the next level.</li><br>` +
       `<li><code>/giveexp [user], [amount], [reason]</code> - Give a specified amount of EXP to a user. (Requires: @ and higher)</li><br>` +
