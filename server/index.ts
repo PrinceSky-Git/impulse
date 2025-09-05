@@ -70,6 +70,7 @@ try {
 }
 
 import { FS, Repl } from '../lib';
+import { JsonDB } from '../impulse-plugins/db';
 
 /*********************************************************
  * Set up most of our globals
@@ -112,7 +113,6 @@ function setupGlobals() {
 	global.Db = nef(nefFs('./impulse-db'));
 
 	// JsonDB
-	import { JsonDB } from '../impulse-plugins/db';
 	const db = new JsonDB("./impulse-db");
 
 	// @ts-ignore
