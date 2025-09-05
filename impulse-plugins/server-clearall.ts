@@ -53,10 +53,10 @@ export const commands: Chat.ChatCommands = {
 	clearallhelp(target, room, user) {
 		if (!this.runBroadcast()) return;
 		this.sendReplyBox(
-			`<div><b><center>Clearall Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
+			`<div><b><center>Clearall Commands</center></b><br>` +
 			`<ul>` +
 			`<li><code>/clearall </code> - Clear all messages from a chatroom (Requires: # and higher)</li><br>` +
-			`<li><code>/globalclearall</code> - clear all messages from all chatrooms (Requires: ~)</li>` +
+			`<li><code>/globalclearall </code> - clear all messages from all chatrooms (Requires: ~)</li>` +
 			`</ul></div>`
 		);
 	},
