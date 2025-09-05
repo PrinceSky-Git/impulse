@@ -8,8 +8,8 @@
 exports.port = 8000;
 
 /**
-* Impulse
-*/
+ * Impulse Tokens & Keys
+ */
 exports.githubToken = '';
 
 /**
