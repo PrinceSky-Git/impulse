@@ -107,11 +107,6 @@ function setupGlobals() {
 
 	global.Impulse = {};
 
-	// Database
-	const nef = require('nef');
-	const nefFs = require('nef-fs');
-	global.Db = nef(nefFs('./impulse-db'));
-
 	// JsonDB
 	const db = new JsonDB("./impulse-db");
 
