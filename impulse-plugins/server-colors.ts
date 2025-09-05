@@ -110,6 +110,10 @@ function generateCSS(name: string, color: string): string {
 
 export const commands: Chat.ChatCommands = {
   customcolor: {
+	  ''(target, room, user) {
+		  this.parse(`/customcolorhelp`):
+	  },
+	  
     set(target: string, room: ChatRoom, user: User): void {
       this.checkCan('ban');
       const targets: string[] = target.split(',').map(t => t.trim());
@@ -158,10 +162,6 @@ export const commands: Chat.ChatCommands = {
       this.checkCan('ban');
       updateColor();
       this.privateModAction(`(${user.name} has reloaded custom colours.)`);
-    },
-
-    ''(target: string, room: ChatRoom, user: User): void'() {
-      return this.parse("/customcolorhelp");
     },
   },
 
