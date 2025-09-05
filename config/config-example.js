@@ -478,7 +478,7 @@ exports.appealurl = '';
  * replsocketprefix - the prefix for the repl sockets to be listening on
  * replsocketmode - the file mode bits to use for the repl sockets
  */
-exports.repl = true;
+exports.repl = false;
 exports.replsocketprefix = './logs/repl/';
 exports.replsocketmode = 0o600;
 
@@ -572,6 +572,15 @@ exports.chatlogreader = 'fs';
  *     - game: make games.
  */
 exports.grouplist = [
+	{
+		symbol: '£',
+		id: "owner",
+		name: "Owner",
+		inherit: "~",
+		jurisdiction: 'u',
+		globalonly: true,
+		promote: '£u',
+	},
 	{
 		symbol: '~',
 		id: "admin",
