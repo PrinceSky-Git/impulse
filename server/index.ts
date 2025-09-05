@@ -102,6 +102,17 @@ function setupGlobals() {
 		});
 	}
 
+	/* Impulse Globals */
+
+	global.Impulse = {};
+
+	// Database
+	const nef = require('nef');
+	const nefFs = require('nef-fs');
+	global.Db = nef(nefFs('./impulse-db'));
+
+	/* Impulse Globals End */
+
 	const { Dex } = require('../sim/dex');
 	global.Dex = Dex;
 	global.toID = Dex.toID;
