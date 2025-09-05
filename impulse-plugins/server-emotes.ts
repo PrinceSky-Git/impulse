@@ -123,8 +123,6 @@ export const commands: ChatCommands = {
 			if (room.emoteSize) size = room.emoteSize;
 
 			this.sendReply(`|raw|The emoticon ${Chat.escapeHTML(targetSplit[0])} has been added: <img src="${targetSplit[1]}" width="${size}" height="${size}">`);
-			//if (Rooms.get("upperstaff")) Rooms.get("upperstaff").add(`|raw|${Impulse.nameColor(user.name, true)} has added the emoticon ${Chat.escapeHTML(targetSplit[0])}: <img src="${targetSplit[1]}" width="${size}" height="${size}">`);
-			//Impulse.messageSeniorStaff(`/html ${Impulse.nameColor(user.name, true)} has added the emoticon ${Chat.escapeHTML(targetSplit[0])}: <img src="${targetSplit[1]}" width="${size}" height="${size}">`);
 		},
 
 		delete: "del",
@@ -140,8 +138,6 @@ export const commands: ChatCommands = {
 			saveEmoticons();
 
 			this.sendReply("That emoticon has been removed.");
-			//if (Rooms.get("upperstaff")) Rooms.get("upperstaff").add(`|raw|${Impulse.nameColor(user.name, true)} has removed the emoticon ${Chat.escapeHTML(target)}.`);
-			//Impulse.messageSeniorStaff(`/html ${Impulse.nameColor(user.name, true)} has removed the emoticon ${Chat.escapeHTML(target)}.`);
 		},
 
 		toggle(target: string, room: Room, user: User) {
@@ -216,17 +212,22 @@ export const commands: ChatCommands = {
 		this.parse(e);
 	},
 
-	emoticonshelp: [
-		`Emoticon Commands:
-		/emoticon may be substituted with /emoticons, /emotes, or /emote
-		/emoticon add [name], [url] - Adds an emoticon. Requires @, &, #, ~
-		/emoticon del/delete/remove/rem [name] - Removes an emoticon. Requires @, &, #, ~
-		/emoticon toggle - Enables or disables emoticons in the current room depending on if they are already active. Requires @, &, #, ~
-		/emoticon view/list - Displays the list of emoticons.
-		/emoticon ignore - Ignores emoticons in chat messages.
-		/emoticon unignore - Unignores emoticons in chat messages.
-		/emoticon size [size] - Changes the size of emoticons in the current room. Requires @, &, #, ~
-		/randemote - Randomly sends an emote from the emoticon list.
-		/emoticon help - Displays this help command.`,
-	],
+	emoticonshelp(target, room, user) {
+	if (!this.runBroadcast()) return;
+	this.sendReplyBox(
+		`<div><b><center>Emoticon Commands</center></b><br>` +
+		`<ul>` +
+		`<li><code>/emoticon</code> may be substituted with <code>/emoticons</code>, <code>/emotes</code>, or <code>/emote</code></li><br>` +
+		`<li><code>/emoticon add [name], [url]</code> - Adds an emoticon. (Requires: @, &, #, ~)</li><br>` +
+		`<li><code>/emoticon del/delete/remove/rem [name]</code> - Removes an emoticon. (Requires: @, &, #, ~)</li><br>` +
+		`<li><code>/emoticon toggle</code> - Enables or disables emoticons in the current room depending on if they are already active. (Requires: @, &, #, ~)</li><br>` +
+		`<li><code>/emoticon view/list</code> - Displays the list of emoticons.</li><br>` +
+		`<li><code>/emoticon ignore</code> - Ignores emoticons in chat messages.</li><br>` +
+		`<li><code>/emoticon unignore</code> - Unignores emoticons in chat messages.</li><br>` +
+		`<li><code>/emoticon size [size]</code> - Changes the size of emoticons in the current room. (Requires: @, &, #, ~)</li><br>` +
+		`<li><code>/randemote</code> - Randomly sends an emote from the emoticon list.</li><br>` +
+		`<li><code>/emoticon help</code> - Displays this help command.</li>` +
+		`</ul></div>`
+	);
+	},
 };
