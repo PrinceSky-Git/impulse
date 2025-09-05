@@ -69,7 +69,7 @@ function saveEmoticons(): void {
 
 function parseEmoticons(message: string, room?: Room): string | false {
 	if (emoteRegex.test(message)) {
-		let size = 50;
+		let size = 32;
 		let lobby = Rooms.get(`lobby`);
 		if (lobby && lobby.emoteSize) size = lobby.emoteSize;
 		message = Impulse.parseMessage(message).replace(emoteRegex, function (match) {
@@ -104,7 +104,7 @@ export const commands: ChatCommands = {
 	emoticon: {
 		add(target: string, room: Room, user: User) {
 			room = this.requireRoom();
-			this.checkCan('emotes', null, room);
+			this.checkCan('ban', null, room);
 			if (!target) return this.parse("/emoticonshelp");
 
 			let targetSplit = target.split(",");
@@ -130,7 +130,7 @@ export const commands: ChatCommands = {
 		rem: "del",
 		del(target: string, room: Room, user: User) {
 			room = this.requireRoom();
-			this.checkCan('emotes', null, room);
+			this.checkCan('ban', null, room);
 			if (!target) return this.parse("/emoticonshelp");
 			if (!emoticons[target]) return this.errorReply("That emoticon does not exist.");
 
@@ -142,7 +142,7 @@ export const commands: ChatCommands = {
 
 		toggle(target: string, room: Room, user: User) {
 			room = this.requireRoom();
-			this.checkCan('emotes', null, room);
+			this.checkCan('ban', null, room);
 			if (!room.disableEmoticons) {
 				room.disableEmoticons = true;
 				Rooms.global.writeChatRoomData();
@@ -186,7 +186,7 @@ export const commands: ChatCommands = {
 
 		size(target: string, room: Room, user: User) {
 			room = this.requireRoom();
-			if (room.id === `lobby` && !this.can(`ban`) || room.id !== `lobby` && !this.checkCan(`ban`, null, room)) return false;
+			this.checkCan('ban');
 			if (!target) return this.sendReply(`Usage: /emoticons size [number]`);
 
 			let size = Math.round(Number(target));
