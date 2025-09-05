@@ -33,8 +33,8 @@ function escapeRegExp(str: string): string {
 	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"); // eslint-disable-line no-useless-escape
 }
 
-let emoticons: {[key: string]: string} = {"feelsbd": "http://i.imgur.com/TZvJ1lI.png"};
-let emoteRegex: RegExp = new RegExp("feelsbd", "g");
+let emoticons: {[key: string]: string} = {"lmao": "https://cdn3.emoji.gg/emojis/32868-pepe-lmfaoooo.gif"};
+let emoteRegex: RegExp = new RegExp("lmao", "g");
 Impulse.ignoreEmotes = {};
 try {
 	const ignoreEmotesData = FS(IGNORE_EMOTES_CONFIG_PATH).readIfExistsSync();
