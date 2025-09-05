@@ -9,9 +9,15 @@ import { FS } from '../lib';
 // Change this to match your server's userlist color.
 const backgroundColor = 'rgba(248, 187, 217, 0.3)';
 const STAFF_ROOM_ID = 'staff';
+const DEFAULT_ICON_SIZE = 22;
+
+interface IconData {
+	url: string;
+	size?: number;
+}
 
 interface Icons {
-	[userid: string]: string;
+	[userid: string]: IconData | string; // Support both old string format and new object format
 }
 
 async function updateIcons(): Promise<void> {
@@ -20,7 +26,21 @@ async function updateIcons(): Promise<void> {
 		
 		let newCss = '/* ICONS START */\n';
 		for (const name in icons) {
-			newCss += `[id$="-userlist-user-${toID(name)}"] { background: ${backgroundColor} url("${icons[name]}") right no-repeat !important; background-size: 17px!important;}\n`;
+			const iconData = icons[name];
+			let url: string;
+			let size: number;
+			
+			if (typeof iconData === 'string') {
+				// Legacy format - just a URL string
+				url = iconData;
+				size = DEFAULT_ICON_SIZE;
+			} else {
+				// New format - object with url and size
+				url = iconData.url;
+				size = iconData.size || DEFAULT_ICON_SIZE;
+			}
+			
+			newCss += `[id$="-userlist-user-${toID(name)}"] { background: ${backgroundColor} url("${url}") right no-repeat !important; background-size: ${size}px!important;}\n`;
 		}
 		newCss += '/* ICONS END */\n';
 		
@@ -42,24 +62,40 @@ export const commands: Chat.ChatCommands = {
 	icon: {
 		async set(this: CommandContext, target: string, room: Room, user: User) {
 			this.checkCan('ban');
-			const [name, imageUrl] = target.split(',').map(s => s.trim());
+			const parts = target.split(',').map(s => s.trim());
+			const [name, imageUrl, sizeStr] = parts;
+			
 			if (!name || !imageUrl) return this.parse('/help icon');
+			
 			const userId = toID(name);
 			if (userId.length > 19) return this.errorReply('Usernames are not this long...');
 			if (await db.usericons.has(userId)) return this.errorReply('This user already has an icon. Remove it first with /icon delete [user].');
 			
-			await db.usericons.insert(userId, imageUrl);
+			// Parse size parameter
+			let size = DEFAULT_ICON_SIZE;
+			if (sizeStr) {
+				const parsedSize = parseInt(sizeStr);
+				if (isNaN(parsedSize) || parsedSize < 1 || parsedSize > 100) {
+					return this.errorReply('Invalid size. Please use a number between 1 and 100 pixels.');
+				}
+				size = parsedSize;
+			}
+			
+			const iconData: IconData = { url: imageUrl, size };
+			await db.usericons.insert(userId, iconData);
 			await updateIcons();
-			this.sendReply(`|raw|You have given ${Impulse.nameColor(name, true, false)} an icon.`);
+			
+			const sizeDisplay = size !== DEFAULT_ICON_SIZE ? ` (${size}px)` : '';
+			this.sendReply(`|raw|You have given ${Impulse.nameColor(name, true, false)} an icon${sizeDisplay}.`);
 			
 			const targetUser = Users.get(userId);
 			if (targetUser?.connected) {
-				targetUser.popup(`|html|${Impulse.nameColor(user.name, true, true)} has set your userlist icon to: <img src="${imageUrl}" width="32" height="32"><br /><center>Refresh, If you don't see it.</center>`);
+				targetUser.popup(`|html|${Impulse.nameColor(user.name, true, true)} has set your userlist icon to: <img src="${imageUrl}" width="32" height="32">${sizeDisplay}<br /><center>Refresh, If you don't see it.</center>`);
 			}
 			
 			const staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
-				staffRoom.add(`|html|<div class="infobox"> ${Impulse.nameColor(user.name, true, true)} set icon for ${Impulse.nameColor(name, true, false)}: <img src="${imageUrl}" width="32" height="32"></div>`).update();
+				staffRoom.add(`|html|<div class="infobox"> ${Impulse.nameColor(user.name, true, true)} set icon for ${Impulse.nameColor(name, true, false)}: <img src="${imageUrl}" width="32" height="32">${sizeDisplay}</div>`).update();
 			}
 		},
 		
@@ -93,7 +129,7 @@ export const commands: Chat.ChatCommands = {
 		this.sendReplyBox(
 			`<div><b><center>Custom Icon Commands</center></b><br>` +
 			`<ul>` +
-			`<li><code>/icon set [username], [image url]</code> - Gives [user] an icon (Requires: @ and higher)</li><br>` +
+			`<li><code>/icon set [username], [image url], [size in px]</code> - Gives [user] an icon with optional size (default: 22px, max: 100px) (Requires: @ and higher)</li><br>` +
 			`<li><code>/icon delete [username]</code> - Removes a user's icon (Requires: @ and higher)</li>` +
 			`</ul></div>`
 		);
