@@ -27,14 +27,14 @@ class NewsManager {
 			.map(entry =>
 				`<center><strong>${entry.title}</strong></center><br>` +
 				`${entry.desc}<br><br>` +
-				`<small>â€"<em> ${Impulse.nameColor(entry.postedBy, true, false)}</em> on ${entry.postTime}</small>`
+				`<small>-<em> ${Impulse.nameColor(entry.postedBy, true, false)}</em> on ${entry.postTime}</small>`
 			);
 	}
 	
 	static async onUserConnect(user: User): Promise<void> {
 		const news = await this.generateNewsDisplay();
 		if (news.length) {
-			user.send(`|pm| ${Impulse.serverName} News|${user.getIdentity()}|/raw ${news.slice(0, 2).join('<hr>')}`);
+			user.send(`|pm| ${Impulse.serverName} News|${user.getIdentity()}|/raw ${news.slice(0, 3).join('<hr>')}`);
 		}
 	}
 	
