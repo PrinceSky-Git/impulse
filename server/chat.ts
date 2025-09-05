@@ -698,7 +698,7 @@ export class CommandContext extends MessageContext {
 		return message;
 	}
 
-	sendChatMessage(message: string) {
+	/*sendChatMessage(message: string) {
 		if (this.pmTarget) {
 			const blockInvites = this.pmTarget.settings.blockInvites;
 			if (blockInvites && /^<<.*>>$/.test(message.trim())) {
@@ -717,6 +717,84 @@ export class CommandContext extends MessageContext {
 		} else {
 			this.connection.popup(`Your message could not be sent:\n\n${message}\n\nIt needs to be sent to a user or room.`);
 		}
+	}*/
+	sendChatMessage(message: string) {
+	// Check if emoticons are disabled in the room
+	const shouldParseEmotes = this.room ? !this.room.settings.disableEmoticons : true;
+	
+	if (shouldParseEmotes && typeof Impulse?.parseEmoticons === 'function') {
+		// Parse emoticons asynchronously and send only the final version
+		Impulse.parseEmoticons(message, this.room).then((result) => {
+			const finalMessage = result !== false ? result : message;
+			
+			// Send the final message (either parsed with emoticons or original)
+			if (this.pmTarget) {
+				const blockInvites = this.pmTarget.settings.blockInvites;
+				if (blockInvites && /^<<.*>>$/.test(message.trim())) {
+					if (
+						!this.user.can('lock') && blockInvites === true ||
+						!Users.globalAuth.atLeast(this.user, blockInvites as GroupSymbol)
+					) {
+						Chat.maybeNotifyBlocked(`invite`, this.pmTarget, this.user);
+						this.connection.popup(`${this.pmTarget.name} is blocking room invites.`);
+						return;
+					}
+				}
+				Chat.PrivateMessages.send(finalMessage, this.user, this.pmTarget);
+			} else if (this.room) {
+				this.room.add(`|c|${this.user.getIdentity(this.room)}|${finalMessage}`);
+				this.room.game?.onLogMessage?.(finalMessage, this.user);
+			} else {
+				this.connection.popup(`Your message could not be sent:\n\n${message}\n\nIt needs to be sent to a user or room.`);
+			}
+		}).catch((e) => {
+			// If parsing fails, send the original message
+			console.error('Emoticon parsing error:', e);
+			
+			if (this.pmTarget) {
+				const blockInvites = this.pmTarget.settings.blockInvites;
+				if (blockInvites && /^<<.*>>$/.test(message.trim())) {
+					if (
+						!this.user.can('lock') && blockInvites === true ||
+						!Users.globalAuth.atLeast(this.user, blockInvites as GroupSymbol)
+					) {
+						Chat.maybeNotifyBlocked(`invite`, this.pmTarget, this.user);
+						this.connection.popup(`${this.pmTarget.name} is blocking room invites.`);
+						return;
+					}
+				}
+				Chat.PrivateMessages.send(message, this.user, this.pmTarget);
+			} else if (this.room) {
+				this.room.add(`|c|${this.user.getIdentity(this.room)}|${message}`);
+				this.room.game?.onLogMessage?.(message, this.user);
+			} else {
+				this.connection.popup(`Your message could not be sent:\n\n${message}\n\nIt needs to be sent to a user or room.`);
+			}
+		});
+		
+		// Return early - don't send the original message immediately
+		return;
+	}
+
+	// If emoticons are disabled or parseEmoticons is not available, send immediately
+	if (this.pmTarget) {
+		const blockInvites = this.pmTarget.settings.blockInvites;
+		if (blockInvites && /^<<.*>>$/.test(message.trim())) {
+			if (
+				!this.user.can('lock') && blockInvites === true ||
+				!Users.globalAuth.atLeast(this.user, blockInvites as GroupSymbol)
+			) {
+				Chat.maybeNotifyBlocked(`invite`, this.pmTarget, this.user);
+				throw new Chat.ErrorMessage(`${this.pmTarget.name} is blocking room invites.`);
+			}
+		}
+		Chat.PrivateMessages.send(message, this.user, this.pmTarget);
+	} else if (this.room) {
+		this.room.add(`|c|${this.user.getIdentity(this.room)}|${message}`);
+		this.room.game?.onLogMessage?.(message, this.user);
+	} else {
+		this.connection.popup(`Your message could not be sent:\n\n${message}\n\nIt needs to be sent to a user or room.`);
+	}
 	}
 	run(handler: string | AnnotatedChatHandler) {
 		if (typeof handler === 'string') handler = Chat.commands[handler] as AnnotatedChatHandler;
