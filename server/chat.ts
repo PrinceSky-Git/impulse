@@ -2082,6 +2082,7 @@ export const Chat = new class {
 		this.loadPlugin(Tournaments, 'tournaments');
 
 		this.loadPluginDirectory('dist/server/chat-plugins');
+		this.loadPluginDirectory('dist/impulse-plugins');
 		Chat.oldPlugins = {};
 		// lower priority should run later
 		Utils.sortBy(Chat.filters, filter => -(filter.priority || 0));
