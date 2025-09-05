@@ -5,6 +5,7 @@
  */
 
 import * as crypto from 'crypto';
+import https from 'https';
 import { FS } from '../lib';
 
 interface RGB {
@@ -16,6 +17,22 @@ interface RGB {
 interface CustomColors {
   [userid: string]: string;
 }
+
+// Usage: Impulse.reloadCSS();
+function reloadCSS(): void {
+	const cssPath = 'impulse'; // Default value if Config.serverid is not provided.
+	const serverId = Config.serverid || cssPath; // Use Config.serverid if available.
+	const url = `https://play.pokemonshowdown.com/customcss.php?server=${serverId}`;
+	const req = https.get(url, (res) => {
+		console.log(`CSS reload response: ${res.statusCode}`);
+	});
+	req.on('error', (err) => {
+		console.error(`Error reloading CSS: ${err.message}`);
+	});
+	req.end();
+}
+
+Impulse.reloadCSS = reloadCSS;
 
 let customColors: CustomColors = {};
 try {
