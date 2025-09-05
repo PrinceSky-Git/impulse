@@ -1220,7 +1220,9 @@ export class User extends Chat.MessageContext {
 	onDisconnect(connection: Connection) {
 		// Impulse Seen
 		if (this.named) {
-			await db.seen.insert(this.id, Date.now());
+			db.seen.insert(this.id, Date.now()).catch(err => {
+				console.error('Error saving seen data:', err);
+			});
 		}
 		// slightly safer to do this here so that we can do this before Conn#user is nulled.
 		if (connection.openPages) {
