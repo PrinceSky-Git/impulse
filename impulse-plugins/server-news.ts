@@ -105,10 +105,10 @@ export const commands: Chat.Commands = {
 	servernewshelp(target, room, user) {
 	if (!this.runBroadcast()) return;
 	this.sendReplyBox(
-		`<div><b><center>Server News Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b>` +
+		`<div><b><center>Server News Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
 		`<ul>` +
-		`<li><code>/servernews view</code> - Views current server news</li>` +
-		`<li><code>/servernews delete [title]</code> - Deletes news with [title] (Requires @, &, ~)</li>` +
+		`<li><code>/servernews view</code> - Views current server news</li><br>` +
+		`<li><code>/servernews delete [title]</code> - Deletes news with [title] (Requires @, &, ~)</li><br>` +
 		`<li><code>/servernews add [title], [desc]</code> - Adds news (Requires @, &, ~)</li>` +
 		`</ul></div>`
 	);
