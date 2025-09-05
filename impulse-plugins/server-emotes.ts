@@ -26,7 +26,7 @@ function parseMessage(message) {
 	message = message.replace(/&lt;&lt;([a-z0-9-]+)&gt;&gt;/g, '&laquo;<a href="/$1" target="_blank">$1</a>&raquo;'); // <<roomid>>
 	message = Autolinker.link(message, {stripPrefix: false, phone: false, twitter: false});
 	return message;
-},
+}
 Impulse.parseMessage = parseMessage;
 
 function escapeRegExp(str: string): string {
