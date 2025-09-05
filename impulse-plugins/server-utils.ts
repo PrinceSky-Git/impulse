@@ -35,40 +35,6 @@ function reloadCSS(): void {
 
 Impulse.reloadCSS = reloadCSS;
 
-// Used by /clearall & /globalclearall - do not use manually.
-function clearRooms(rooms: Room[], user: User): string[] {
-  const clearedRooms: string[] = [];
-  for (const room of rooms) {
-    if (!room) continue;
-    if (room.log.log) {
-      room.log.log.length = 0;
-    }
-    const userIds = Object.keys(room.users) as ID[];
-    for (const userId of userIds) {
-      const userObj = Users.get(userId);
-      if (userObj?.connections?.length) {
-        for (const connection of userObj.connections) {
-          userObj.leaveRoom(room, connection);
-        }
-      }
-    }
-    clearedRooms.push(room.id);
-    setTimeout(() => {
-      for (const userId of userIds) {
-        const userObj = Users.get(userId);
-        if (userObj?.connections?.length) {
-          for (const connection of userObj.connections) {
-            userObj.joinRoom(room, connection);
-          }
-        }
-      }
-    }, 1000);
-  }
-  return clearedRooms;
-}
-
-Impulse.clearRooms = clearRooms;
-
 // Usage Impulse.generateRandomString(10);
 function generateRandomString(length: number): string {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
