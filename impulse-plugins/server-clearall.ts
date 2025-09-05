@@ -49,4 +49,15 @@ export const commands: Chat.ChatCommands = {
     const roomsToClear = Rooms.global.chatRooms.filter((chatRoom): chatRoom is Room => !!chatRoom && !chatRoom.battle);
     const clearedRooms = clearRooms(roomsToClear, user);
   },
+
+	clearallhelp(target, room, user) {
+		if (!this.runBroadcast()) return;
+		this.sendReplyBox(
+			`<div><b><center>Clearall Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
+			`<ul>` +
+			`<li><code>/clearall </code> - Clear all messages from a chatroom (Requires: # and higher)</li><br>` +
+			`<li><code>/globalclearall</code> - clear all messages from all chatrooms (Requires: ~)</li>` +
+			`</ul></div>`
+		);
+	},
 };
