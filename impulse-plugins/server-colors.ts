@@ -168,10 +168,10 @@ export const commands: Chat.ChatCommands = {
   customcolorhelp(target, room, user) {
     if (!this.runBroadcast()) return;
     this.sendReplyBox(
-		 `<div><b><center>Custom Color Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b>` +
-		 `<ul><li><code>/customcolor set [user], [hex]</code> - Gives [user] a custom color of [hex] (Requires: @ and higher)</li>` +
-		 `<li><code>/customcolor delete [user]</code> - Deletes a user's custom color (Requires: @ and higher)</li>` +
-		 `<li><code>/customcolor reload</code> - Reloads colors. (Requires: ~)</li>` +
+		 `<div><b><center>Custom Color Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
+		 `<ul><li><code>/customcolor set [user], [hex]</code> - Gives [user] a custom color of [hex] (Requires: @ and higher)</li><br>` +
+		 `<li><code>/customcolor delete [user]</code> - Deletes a user's custom color (Requires: @ and higher)</li><br>` +
+		 `<li><code>/customcolor reload</code> - Reloads colors. (Requires: ~)</li><br>` +
 		 `<li><code>/customcolor preview [user], [hex]</code> - Previews what that username looks like with [hex] as the color.</li>` +
 		 `</ul></div>`);
   },
