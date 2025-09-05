@@ -4,6 +4,7 @@ This plugin allows you to use emoticons in both chat rooms (as long as they are 
 */
 
 import { FS } from '../lib';
+const Autolinker = require('autolinker');
 
 const EMOTICONS_CONFIG_PATH = 'config/emoticons.json';
 const IGNORE_EMOTES_CONFIG_PATH = 'config/ignoreemotes.json';
