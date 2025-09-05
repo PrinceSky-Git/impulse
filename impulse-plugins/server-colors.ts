@@ -111,7 +111,7 @@ function generateCSS(name: string, color: string): string {
 export const commands: Chat.ChatCommands = {
   customcolor: {
 	  ''(target, room, user) {
-		  this.parse(`/customcolorhelp`):
+		  this.parse(`/customcolorhelp`);
 	  },
 	  
     set(target: string, room: ChatRoom, user: User): void {
