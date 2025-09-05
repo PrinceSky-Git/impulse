@@ -23,6 +23,8 @@ export class EmoticonManager {
 	private emoteRegex: RegExp;
 	private emoticons: any;
 	private ignoreEmotes: any;
+	private emoticonCache: EmoticonData | null = null; // Add cache
+	private cacheLoaded: boolean = false; // Track if cache is ready
 
 	constructor() {
 		this.emoticons = db.emoticons;
@@ -37,19 +39,25 @@ export class EmoticonManager {
 			if (!data || Object.keys(data).length === 0) {
 				// Initialize with default emoticon
 				await this.emoticons.insert("feelsbd", "http://i.imgur.com/TZvJ1lI.png");
+				this.emoticonCache = { "feelsbd": "http://i.imgur.com/TZvJ1lI.png" };
+			} else {
+				this.emoticonCache = data;
 			}
+			this.cacheLoaded = true;
 			await this.updateRegex();
 		} catch (e) {
 			// Initialize with default if loading fails
 			await this.emoticons.clear(true);
 			await this.emoticons.insert("feelsbd", "http://i.imgur.com/TZvJ1lI.png");
+			this.emoticonCache = { "feelsbd": "http://i.imgur.com/TZvJ1lI.png" };
+			this.cacheLoaded = true;
 			await this.updateRegex();
 		}
 	}
 
 	private async updateRegex(): Promise<void> {
-		const data = await this.emoticons.get() as EmoticonData;
-		if (!data || Object.keys(data).length === 0) {
+		const data = this.emoticonCache || {};
+		if (Object.keys(data).length === 0) {
 			this.emoteRegex = /(?:)/g;
 			return;
 		}
@@ -63,6 +71,12 @@ export class EmoticonManager {
 		if (await this.emoticons.has(name)) return false;
 
 		await this.emoticons.insert(name, url);
+		
+		// Update cache
+		if (this.emoticonCache) {
+			this.emoticonCache[name] = url;
+		}
+		
 		await this.updateRegex();
 		return true;
 	}
@@ -71,18 +85,35 @@ export class EmoticonManager {
 		if (!(await this.emoticons.has(name))) return false;
 
 		await this.emoticons.remove(name);
+		
+		// Update cache
+		if (this.emoticonCache && this.emoticonCache[name]) {
+			delete this.emoticonCache[name];
+		}
+		
 		await this.updateRegex();
 		return true;
 	}
 
 	async getEmoticons(): Promise<EmoticonData> {
+		// Return cached data if available, otherwise fetch from DB
+		if (this.cacheLoaded && this.emoticonCache) {
+			return this.emoticonCache;
+		}
+		
+		// Fallback to DB if cache not ready
 		return (await this.emoticons.get()) as EmoticonData || {};
 	}
 
 	async parseEmoticons(message: string, room?: Room): Promise<string | false> {
+		// Quick check before regex test
+		if (!this.cacheLoaded || !this.emoticonCache || Object.keys(this.emoticonCache).length === 0) {
+			return false;
+		}
+		
 		if (!this.emoteRegex.test(message)) return false;
 
-		const emoticons = await this.getEmoticons();
+		const emoticons = this.emoticonCache; // Use cached data
 		let size = 50;
 		const lobby = Rooms.get('lobby');
 		if (lobby?.emoteSize) size = lobby.emoteSize;
