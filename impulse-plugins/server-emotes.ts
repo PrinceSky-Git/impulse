@@ -9,7 +9,7 @@ const Autolinker = require('autolinker');
 const EMOTICONS_CONFIG_PATH = 'config/emoticons.json';
 const IGNORE_EMOTES_CONFIG_PATH = 'config/ignoreemotes.json';
 
-parseMessage: function (message) {
+function parseMessage(message) {
 	if (message.substr(0, 5) === "/html") {
 		message = message.substr(5);
 		message = message.replace(/\_\_([^< ](?:[^<]*?[^< ])?)\_\_(?![^<]*?<\/a)/g, '<i>$1</i>'); // italics
