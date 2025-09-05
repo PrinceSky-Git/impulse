@@ -19,22 +19,6 @@ function nameColor(name: string, bold: boolean = false, userGroup: boolean = fal
 
 Impulse.nameColor = nameColor;
 
-// Usage: Impulse.reloadCSS();
-function reloadCSS(): void {
-  const cssPath = 'impulse'; // Default value if Config.serverid is not provided.
-  const serverId = Config.serverid || cssPath; // Use Config.serverid if available.
-  const url = `https://play.pokemonshowdown.com/customcss.php?server=${serverId}`;
-  const req = https.get(url, (res) => {
-    console.log(`CSS reload response: ${res.statusCode}`);
-  });
-  req.on('error', (err) => {
-    console.error(`Error reloading CSS: ${err.message}`);
-  });
-  req.end();
-}
-
-Impulse.reloadCSS = reloadCSS;
-
 // Usage Impulse.generateRandomString(10);
 function generateRandomString(length: number): string {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
