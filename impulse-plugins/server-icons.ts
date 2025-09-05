@@ -91,9 +91,9 @@ export const commands: Chat.ChatCommands = {
 	iconhelp(target: string, room: ChatRoom | null, user: User) {
 		if (!this.runBroadcast()) return;
 		this.sendReplyBox(
-			`<div><b><center>Custom Icon Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b>` +
+			`<div><b><center>Custom Icon Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
 			`<ul>` +
-			`<li><code>/icon set [username], [image url]</code> - Gives [user] an icon (Requires: @ and higher)</li>` +
+			`<li><code>/icon set [username], [image url]</code> - Gives [user] an icon (Requires: @ and higher)</li><br>` +
 			`<li><code>/icon delete [username]</code> - Removes a user's icon (Requires: @ and higher)</li>` +
 			`</ul></div>`
 		);
