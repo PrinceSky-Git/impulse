@@ -1,6 +1,6 @@
 /*
 * PokemonShowdown JasonDB
-* Its a abstraction layer built around fs and loadash
+* Proxy DB built around fs and lodash
 * @author ClarkJ338
 * @license MIT
 */
