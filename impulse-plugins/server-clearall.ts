@@ -49,3 +49,4 @@ export const commands: Chat.ChatCommands = {
     const roomsToClear = Rooms.global.chatRooms.filter((chatRoom): chatRoom is Room => !!chatRoom && !chatRoom.battle);
     const clearedRooms = clearRooms(roomsToClear, user);
   },
+};
