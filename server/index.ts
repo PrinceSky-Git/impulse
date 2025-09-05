@@ -114,6 +114,8 @@ function setupGlobals() {
 	// JsonDB
 	import { JsonDB } from '../impulse-plugins/db';
 	const db = new JsonDB("./impulse-db");
+
+	// @ts-ignore
 	global.db = db;
 
 	/* Impulse Globals End */
