@@ -2,7 +2,9 @@
 * Add this code in server/users.ts
 * In onDisconnect Function
 * if (this.named) {
-*    await global.db.seen.insert(this.id, Date.now());
+* db.seen.insert(this.id, Date.now()).catch(err => {
+* console.error('Error saving seen data:', err);
+* });
 * }
 */
 
