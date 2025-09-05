@@ -255,10 +255,10 @@ export const commands: ChatCommands = {
   },
   fd: 'filedelete',
 
-	fm(target, room, user) {
+	fmhelp(target, room, user) {
     if (!this.runBroadcast()) return;
     this.sendReplyBox(
-		 `<div><b><center>File Management Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b><br>` +
+		 `<div><b><center>File Management Commands</center></b><br>` +
 		 `<ul><li><code>/fileupload [path]</code> OR <code>/fu [path]</code> - Upload file to GitHub Gist (Requires: Console/Owner)</li><br>` +
 		 `<li><code>/fileread [path]</code> OR <code>/fr [path]</code> - Read file contents (Requires: Console/Owner)</li><br>` +
 		 `<li><code>/filesave [path],[raw gist url]</code> OR <code>/fs [path],[raw gist url]</code> - Save/overwrite file (Requires: Console/Owner)</li><br>` +
