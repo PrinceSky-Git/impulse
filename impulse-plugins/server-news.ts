@@ -82,7 +82,7 @@ export const commands: Chat.Commands = {
 		
 		async add(target, room, user) {
 			this.checkCan('ban');
-			if (!target) return this.parse('/help servernews');
+			if (!target) return this.parse('/help servernewshelp');
 			const [title, ...descParts] = target.split(',');
 			if (!descParts.length) return this.errorReply("Usage: /news add [title], [desc]");
 			const result = await NewsManager.addNews(title.trim(), descParts.join(',').trim(), user);
@@ -92,7 +92,7 @@ export const commands: Chat.Commands = {
 		remove: 'delete',
 		async delete(target, room, user) {
 			this.checkCan('ban');
-			if (!target) return this.parse('/help servernews');
+			if (!target) return this.parse('/help servernewshelp');
 			const result = await NewsManager.deleteNews(target);
 			if (result) {
 				this.sendReply(`You've removed news with title ${target}`);
@@ -101,14 +101,16 @@ export const commands: Chat.Commands = {
 			}
 		},
 	},
-	
+
 	servernewshelp(target, room, user) {
-		if (!this.runBroadcast()) return;
-		this.sendReplyBox(
-			`<b>Server News Commands:</b><br>` +
-			`• <code>/servernews view</code> - Views current server news<br>` +
-			`• <code>/servernews delete [title]</code> - Deletes news with [title] (Requires @, &, ~)<br>` +
-			`• <code>/servernews add [title], [desc]</code> - Adds news (Requires @, &, ~)`
-		);
-	},
+	if (!this.runBroadcast()) return;
+	this.sendReplyBox(
+		`<div><b><center>Server News Commands By ${Impulse.nameColor('Prince Sky', true, true)}</center></b>` +
+		`<ul>` +
+		`<li><code>/servernews view</code> - Views current server news</li>` +
+		`<li><code>/servernews delete [title]</code> - Deletes news with [title] (Requires @, &, ~)</li>` +
+		`<li><code>/servernews add [title], [desc]</code> - Adds news (Requires @, &, ~)</li>` +
+		`</ul></div>`
+	);
+},
 };
