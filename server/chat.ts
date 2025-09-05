@@ -738,7 +738,7 @@ export class CommandContext extends MessageContext {
 				for (const u in this.room.users) {
 					const curUser = Users.get(u);
 					if (!curUser || !curUser.connected) continue;
-					if (Server.ignoreEmotes[curUser.user.id]) {
+					if (Impulse.ignoreEmotes[curUser.user.id]) {
 						curUser.sendTo(this.room, `${(this.room.type === 'chat' ? `|c:|${(~~(Date.now() / 1000))}|` : `|c|`)}${this.user.getIdentity(this.room)}|${message}`);
 						continue;
 					}
