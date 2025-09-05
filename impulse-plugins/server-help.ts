@@ -12,6 +12,7 @@ export const commands: ChatCommands = {
 			`<li><code>/fmhelp</code> - Shows help for file management commands</li><br>` +
 			`<li><code>/iconhelp</code> - Shows help for icon commands</li><br>` +
 			`<li><code>/impulsehelp</code> - Shows this help menu</li><br>` +
+			`<li><code>/help seen</code> - Shows help for seen commands</li><br>` +
 			`<li><code>/servernewshelp</code> - Shows help for server news commands</li>` +
 			`</ul></div>`);
 	},
