@@ -111,6 +111,11 @@ function setupGlobals() {
 	const nefFs = require('nef-fs');
 	global.Db = nef(nefFs('./impulse-db'));
 
+	// JsonDB
+	import { JsonDB } from '../impulse-plugins/db';
+	const db = new JsonDB("./impulse-db");
+	global.db = db;
+
 	/* Impulse Globals End */
 
 	const { Dex } = require('../sim/dex');
