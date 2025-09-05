@@ -4,8 +4,6 @@
 * Prince Sky.
 */
 
-import https from 'https';
-
 // Usage Impulse.serverName
 Impulse.serverName = 'Impulse';
 
