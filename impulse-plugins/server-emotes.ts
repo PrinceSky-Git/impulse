@@ -13,7 +13,9 @@ interface IgnoreEmotesData {
 	[userId: string]: boolean;
 }
 
-const EMOTE_SIZE = Config.emoteSize || '32';
+function getEmoteSize(): string {
+	return Config.emoteSize || '32';
+}
 
 function parseMessage(message: string): string {
 	if (message.substr(0, 5) === "/html") {
@@ -82,8 +84,9 @@ function saveEmoticons(): void {
 
 function parseEmoticons(message: string, room?: Room): string | false {
 	if (emoteRegex.test(message)) {
+		const emoteSize = getEmoteSize();
 		message = Impulse.parseMessage(message).replace(emoteRegex, (match: string): string => {
-			return `<img src="${emoticons[match]}" title="${match}" height="${EMOTE_SIZE}" width="${EMOTE_SIZE}">`;
+			return `<img src="${emoticons[match]}" title="${match}" height="${emoteSize}" width="${emoteSize}">`;
 		});
 		return message;
 	}
@@ -175,7 +178,7 @@ export const commands: ChatCommands = {
 				reply += '<tr>';
 				for (let j = i; j < i + 5 && j < emoteKeys.length; j++) {
 					const emote = emoteKeys[j];
-					reply += `<td style="text-align: center; padding: 10px; vertical-align: top; border: 1px solid #000; border-radius: 8px;">`;
+					reply += `<td style="text-align: center; padding: 10px; vertical-align: top; border: 1px solid #ccc; border-radius: 8px;">`;
 					reply += `<img src="${emoticons[emote]}" height="40" width="40" style="display: block; margin: 0 auto;"><br>`;
 					reply += `<small>${Chat.escapeHTML(emote)}</small>`;
 					reply += `</td>`;
