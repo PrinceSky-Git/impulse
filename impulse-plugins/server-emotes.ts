@@ -217,7 +217,7 @@ export const commands: ChatCommands = {
 
 		"": "help",
 		help() {
-			this.parse('/emoticonshelp');
+			this.parse('/emote view');
 		},
 	},
 
