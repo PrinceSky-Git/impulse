@@ -13,6 +13,8 @@ interface IgnoreEmotesData {
 	[userId: string]: boolean;
 }
 
+const EMOTE_SIZE = Config.emoteSize || '32';
+
 function parseMessage(message: string): string {
 	if (message.substr(0, 5) === "/html") {
 		message = message.substr(5);
@@ -81,7 +83,7 @@ function saveEmoticons(): void {
 function parseEmoticons(message: string, room?: Room): string | false {
 	if (emoteRegex.test(message)) {
 		message = Impulse.parseMessage(message).replace(emoteRegex, (match: string): string => {
-			return `<img src="${emoticons[match]}" title="${match}" height="32" width="32">`;
+			return `<img src="${emoticons[match]}" title="${match}" height="${EMOTE_SIZE}" width="${EMOTE_SIZE}">`;
 		});
 		return message;
 	}
@@ -165,10 +167,23 @@ export const commands: ChatCommands = {
 		list(target: string, room: Room, user: User) {
 			if (!this.runBroadcast()) return;
 
-			let reply = `<strong><u>Emoticons (${Object.keys(emoticons).length})</u></strong><br />`;
-			for (const emote in emoticons) {
-				reply += `(${emote} <img src="${emoticons[emote]}" height="40" width="40">)`;
+			const emoteKeys = Object.keys(emoticons);
+			let reply = `<strong><u>Emoticons (${emoteKeys.length})</u></strong><br />`;
+			reply += '<table style="border-collapse: collapse;">';
+			
+			for (let i = 0; i < emoteKeys.length; i += 5) {
+				reply += '<tr>';
+				for (let j = i; j < i + 5 && j < emoteKeys.length; j++) {
+					const emote = emoteKeys[j];
+					reply += `<td style="text-align: center; padding: 10px; vertical-align: top;">`;
+					reply += `<img src="${emoticons[emote]}" height="40" width="40" style="display: block; margin: 0 auto;"><br>`;
+					reply += `<small>${Chat.escapeHTML(emote)}</small>`;
+					reply += `</td>`;
+				}
+				reply += '</tr>';
 			}
+			
+			reply += '</table>';
 			this.sendReply(`|raw|<div class="infobox infobox-limited">${reply}</div>`);
 		},
 
@@ -186,9 +201,22 @@ export const commands: ChatCommands = {
 			this.sendReply('You are no longer ignoring emoticons.');
 		},
 
+		size(target: string, room: Room, user: User) {
+			this.checkCan('ban', null, room);
+			if (!target) return this.errorReply('Please specify a size (e.g., 32, 64, 128).');
+			
+			const size = parseInt(target);
+			if (isNaN(size) || size < 16 || size > 256) {
+				return this.errorReply('Size must be a number between 16 and 256.');
+			}
+
+			Config.emoteSize = size.toString();
+			this.sendReply(`Emoticon size has been set to ${size}px.`);
+		},
+
 		"": "help",
 		help() {
-			this.parse('/emoticonshelp');
+			this.parse('/emote view');
 		},
 	},
 
@@ -202,7 +230,7 @@ export const commands: ChatCommands = {
 	emoticonshelp(target: string, room: Room, user: User) {
 		if (!this.runBroadcast()) return;
 		this.sendReplyBox(
-			'<div><b><center>Emoticon Commands</center></b><br>' +
+			'<div class="infobox"><b><center>Emoticon Commands</center></b><br>' +
 			'<ul>' +
 			'<li><code>/emoticon</code> may be substituted with <code>/emoticons</code>, <code>/emotes</code>, or <code>/emote</code></li><br>' +
 			'<li><code>/emoticon add [name], [url]</code> - Adds an emoticon. (Requires: @, &, #, ~)</li><br>' +
@@ -211,6 +239,7 @@ export const commands: ChatCommands = {
 			'<li><code>/emoticon view/list</code> - Displays the list of emoticons.</li><br>' +
 			'<li><code>/emoticon ignore</code> - Ignores emoticons in chat messages.</li><br>' +
 			'<li><code>/emoticon unignore</code> - Unignores emoticons in chat messages.</li><br>' +
+			'<li><code>/emoticon size [size]</code> - Sets the size of emoticons (16-256px). (Requires: @, &, #, ~)</li><br>' +
 			'<li><code>/randemote</code> - Randomly sends an emote from the emoticon list.</li><br>' +
 			'<li><code>/emoticon help</code> - Displays this help command.</li>' +
 			'</ul></div>'
