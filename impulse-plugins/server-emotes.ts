@@ -168,14 +168,14 @@ export const commands: ChatCommands = {
 			if (!this.runBroadcast()) return;
 
 			const emoteKeys = Object.keys(emoticons);
-			let reply = `<center><strong>Emoticons (${emoteKeys.length})</strong><br><br>`;
+			let reply = '<center><details><summary>Click to view emoticons</summary>';
 			reply += '<table style="border-collapse: collapse;">';
 			
 			for (let i = 0; i < emoteKeys.length; i += 5) {
 				reply += '<tr>';
 				for (let j = i; j < i + 5 && j < emoteKeys.length; j++) {
 					const emote = emoteKeys[j];
-					reply += `<td style="text-align: center; padding: 10px; vertical-align: top; border: 1px solid #ccc;">`;
+					reply += `<td style="text-align: center; padding: 10px; vertical-align: top; border: 1px solid #000; border-radius: 8px;">`;
 					reply += `<img src="${emoticons[emote]}" height="40" width="40" style="display: block; margin: 0 auto;"><br>`;
 					reply += `<small>${Chat.escapeHTML(emote)}</small>`;
 					reply += `</td>`;
@@ -183,8 +183,9 @@ export const commands: ChatCommands = {
 				reply += '</tr>';
 			}
 			
-			reply += '</table></center>';
-			this.sendReply(`|raw|<div class="infobox infobox-limited"><br>${reply}</div>`);
+			reply += '</table>';
+			reply += '</details></center>';
+			this.sendReply(`|raw|<div class="infobox infobox-limited">${reply}</div>`);
 		},
 
 		ignore(target: string, room: Room, user: User) {
@@ -216,7 +217,7 @@ export const commands: ChatCommands = {
 
 		"": "help",
 		help() {
-			this.parse('/emote view');
+			this.parse('/emoticonshelp');
 		},
 	},
 
@@ -230,7 +231,7 @@ export const commands: ChatCommands = {
 	emoticonshelp(target: string, room: Room, user: User) {
 		if (!this.runBroadcast()) return;
 		this.sendReplyBox(
-			'<div class="infobox"><b><center>Emoticon Commands</center></b><br>' +
+			'<div><b><center>Emoticon Commands</center></b><br>' +
 			'<ul>' +
 			'<li><code>/emoticon</code> may be substituted with <code>/emoticons</code>, <code>/emotes</code>, or <code>/emote</code></li><br>' +
 			'<li><code>/emoticon add [name], [url]</code> - Adds an emoticon. (Requires: @, &, #, ~)</li><br>' +
