@@ -1,3 +1,12 @@
+/**
+ * Chat Plugin: Hybrid Definition Lookup
+ * Command: /define [term]
+ * - Pokémon terms → redirect to /dt (uses PS native info panels)
+ * - Other words → dictionary definition (always enabled)
+ *
+ * Author: ChatGPT (2025)
+ */
+
 import {Dex} from '../sim/dex';
 import {Net} from '../lib/net';
 
@@ -20,23 +29,7 @@ export const commands: ChatCommands = {
 			return this.parse(`/dt ${term}`);
 		}
 
-		if (toID(term) === 'toggle') {
-			if (!room) return this.errorReply(`/define toggle can only be used in chatrooms.`);
-			if (!this.can('declare', null, room)) return;
-
-			room.settings.allowDictionaryDefinitions = !room.settings.allowDictionaryDefinitions;
-			room.saveSettings();
-			this.addModAction(
-				`${user.name} toggled dictionary definitions to ` +
-				(room.settings.allowDictionaryDefinitions ? 'ON' : 'OFF')
-			);
-			return;
-		}
-
-		if (room && !room.settings.allowDictionaryDefinitions) {
-			return this.errorReply(`Dictionary definitions are not enabled in this room.`);
-		}
-
+		// --- Dictionary API lookup ---
 		try {
 			const response = await Net(`GET ${DICTIONARY_API}${encodeURIComponent(term)}`).getJson();
 			if (!response || !Array.isArray(response) || !response[0]?.meanings) {
@@ -64,17 +57,6 @@ export const commands: ChatCommands = {
 
 	definehelp: [
 		`/define [term] - Shows information about a Pokémon, move, ability, or item (redirects to /dt).`,
-		`/define [word] - Shows dictionary definition of an English word.`,
-		`   • Always works in PMs.`,
-		`   • In chatrooms, requires dictionary definitions to be enabled (default: on).`,
-		`/define toggle - (Roomstaff) Toggle dictionary definitions in this room.`,
+		`/define [word] - Shows dictionary definition of an English word (always enabled).`,
 	],
-};
-
-export const roomSettings: ChatRoomSettingsTable = {
-	allowDictionaryDefinitions: {
-		label: "Allow /define to fetch non-Pokémon dictionary definitions",
-		type: 'boolean',
-		default: true,
-	},
 };
