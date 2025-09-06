@@ -168,7 +168,7 @@ export const commands: ChatCommands = {
 			if (!this.runBroadcast()) return;
 
 			const emoteKeys = Object.keys(emoticons);
-			let reply = `<strong><u>Emoticons (${emoteKeys.length})</u></strong><br />`;
+			let reply = `<center><strong>Emoticons (${emoteKeys.length})</strong><br><br>`;
 			reply += '<table style="border-collapse: collapse;">';
 			
 			for (let i = 0; i < emoteKeys.length; i += 5) {
@@ -183,7 +183,7 @@ export const commands: ChatCommands = {
 				reply += '</tr>';
 			}
 			
-			reply += '</table>';
+			reply += '</table></center>';
 			this.sendReply(`|raw|<div class="infobox infobox-limited"><br>${reply}</div>`);
 		},
 
