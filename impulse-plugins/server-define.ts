@@ -6,7 +6,7 @@ const DICTIONARY_API = `https://api.dictionaryapi.dev/api/v2/entries/en/`;
 export const commands: ChatCommands = {
 	async define(target, room, user) {
 		if (!target) return this.errorReply("Usage: /define [word | Pokémon | move | ability | item]");
-		this.checkCan('broadcast');
+		this.checkCan('talk');
 
 		const term = target.trim();
 		const id = toID(term);
