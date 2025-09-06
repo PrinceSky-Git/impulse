@@ -175,7 +175,7 @@ export const commands: ChatCommands = {
 				reply += '<tr>';
 				for (let j = i; j < i + 5 && j < emoteKeys.length; j++) {
 					const emote = emoteKeys[j];
-					reply += `<td style="text-align: center; padding: 10px; vertical-align: top;">`;
+					reply += `<td style="text-align: center; padding: 10px; vertical-align: top; border: 1px solid #ccc;">`;
 					reply += `<img src="${emoticons[emote]}" height="40" width="40" style="display: block; margin: 0 auto;"><br>`;
 					reply += `<small>${Chat.escapeHTML(emote)}</small>`;
 					reply += `</td>`;
@@ -184,7 +184,7 @@ export const commands: ChatCommands = {
 			}
 			
 			reply += '</table>';
-			this.sendReply(`|raw|<div class="infobox infobox-limited">${reply}</div>`);
+			this.sendReply(`|raw|<div class="infobox infobox-limited"><br>${reply}</div>`);
 		},
 
 		ignore(target: string, room: Room, user: User) {
