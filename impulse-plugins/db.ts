@@ -1,6 +1,6 @@
 /*
 * PokemonShowdown JasonDB
-* Proxy DB built around fs and lodash
+* Proxy DB built around fs and lodash with concurrent write safety
 * @author ClarkJ338
 * @license MIT
 */
@@ -12,8 +12,16 @@ import _ from "lodash";
 
 type CollectionData<T> = T[] | Record<string, any>;
 
+interface PendingOperation {
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
+  operation: () => Promise<any>;
+}
+
 export class JsonDB {
   private basePath: string;
+  private locks: Map<string, Promise<any>> = new Map();
+  private queues: Map<string, PendingOperation[]> = new Map();
 
   constructor(basePath: string = "./db") {
     this.basePath = basePath;
@@ -79,14 +87,88 @@ export class JsonDB {
     );
   }
 
+  /**
+   * Executes an operation with file locking to prevent concurrent writes
+   */
+  private async _withLock<T>(collection: string, operation: () => Promise<T>): Promise<T> {
+    const lockKey = collection;
+    
+    // If there's already a lock, queue this operation
+    if (this.locks.has(lockKey)) {
+      return new Promise<T>((resolve, reject) => {
+        if (!this.queues.has(lockKey)) {
+          this.queues.set(lockKey, []);
+        }
+        this.queues.get(lockKey)!.push({
+          resolve,
+          reject,
+          operation: operation as () => Promise<any>
+        });
+      });
+    }
+
+    // Create the lock
+    const lockPromise = this._executeLocked(lockKey, operation);
+    this.locks.set(lockKey, lockPromise);
+
+    try {
+      const result = await lockPromise;
+      return result;
+    } finally {
+      // Process queued operations
+      await this._processQueue(lockKey);
+    }
+  }
+
+  private async _executeLocked<T>(lockKey: string, operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } finally {
+      // Always remove the lock when done
+      this.locks.delete(lockKey);
+    }
+  }
+
+  private async _processQueue(lockKey: string): Promise<void> {
+    const queue = this.queues.get(lockKey);
+    if (!queue || queue.length === 0) {
+      return;
+    }
+
+    // Take the next operation from the queue
+    const next = queue.shift()!;
+    
+    // If queue is empty, remove it
+    if (queue.length === 0) {
+      this.queues.delete(lockKey);
+    }
+
+    // Execute the next operation with a new lock
+    const lockPromise = this._executeLocked(lockKey, next.operation);
+    this.locks.set(lockKey, lockPromise);
+
+    try {
+      const result = await lockPromise;
+      next.resolve(result);
+    } catch (error) {
+      next.reject(error);
+    } finally {
+      // Continue processing the queue
+      await this._processQueue(lockKey);
+    }
+  }
+
   // -------- Global Utility --------
   public async deleteAll(): Promise<boolean> {
-    const files = await fsp.readdir(this.basePath);
-    const jsonFiles = files.filter(f => f.endsWith(".json"));
-    for (const file of jsonFiles) {
-      await fsp.unlink(path.join(this.basePath, file)).catch(() => {});
-    }
-    return true;
+    // Lock all collections by using a special global lock
+    return this._withLock("__global__", async () => {
+      const files = await fsp.readdir(this.basePath);
+      const jsonFiles = files.filter(f => f.endsWith(".json"));
+      for (const file of jsonFiles) {
+        await fsp.unlink(path.join(this.basePath, file)).catch(() => {});
+      }
+      return true;
+    });
   }
 
   public deleteAllSync(): boolean {
@@ -105,7 +187,7 @@ export class JsonDB {
     const self = this;
 
     return {
-      // ----- Retrieval -----
+      // ----- Retrieval (Read Operations - No Locking Needed) -----
       get: async (query?: object | ((item: T) => boolean)): Promise<T[] | object> => {
         const data = (await self._load<T>(name)) ?? [];
         if (Array.isArray(data)) {
@@ -182,38 +264,40 @@ export class JsonDB {
         return Array.isArray(data) ? data.length : Object.keys(data).length;
       },
 
-      // ----- Modification -----
+      // ----- Modification (Write Operations with Locking) -----
       insert: async (item: T | Record<string, any>, value?: any): Promise<any> => {
-        let data = await self._load<T>(name);
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
 
-        if (!data) {
+          if (!data) {
+            if (typeof item === "string" && value !== undefined) {
+              data = {}; // key-value mode
+            } else {
+              data = []; // array mode
+            }
+          }
+
           if (typeof item === "string" && value !== undefined) {
-            data = {}; // key-value mode
-          } else {
-            data = []; // array mode
+            (data as Record<string, any>)[item] = value;
+            await self._save(name, data);
+            return { [item]: value };
           }
-        }
 
-        if (typeof item === "string" && value !== undefined) {
-          (data as Record<string, any>)[item] = value;
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            const newItem = item as T;
+            if (!newItem.id) {
+              newItem.id = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
+            }
+            arr.push(newItem);
+            await self._save(name, arr);
+            return newItem;
+          }
+
+          Object.assign(data, item);
           await self._save(name, data);
-          return { [item]: value };
-        }
-
-        if (Array.isArray(data)) {
-          const arr = data as T[];
-          const newItem = item as T;
-          if (!newItem.id) {
-            newItem.id = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
-          }
-          arr.push(newItem);
-          await self._save(name, arr);
-          return newItem;
-        }
-
-        Object.assign(data, item);
-        await self._save(name, data);
-        return item;
+          return item;
+        });
       },
 
       insertSync: (item: T | Record<string, any>, value?: any): any => {
@@ -250,24 +334,26 @@ export class JsonDB {
       },
 
       update: async (idOrKey: number | string, newData: Partial<T> | any): Promise<T | any | null> => {
-        let data = await self._load<T>(name);
-        if (!data) return null;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) return null;
 
-        if (Array.isArray(data)) {
-          const arr = data as T[];
-          const index = _.findIndex(arr, { id: idOrKey });
-          if (index === -1) return null;
-          arr[index] = _.merge(arr[index], newData);
-          await self._save(name, arr);
-          return arr[index];
-        } else {
-          if (_.has(data, idOrKey)) {
-            _.set(data, idOrKey, _.merge(_.get(data, idOrKey), newData));
-            await self._save(name, data);
-            return _.get(data, idOrKey);
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            const index = _.findIndex(arr, { id: idOrKey });
+            if (index === -1) return null;
+            arr[index] = _.merge(arr[index], newData);
+            await self._save(name, arr);
+            return arr[index];
+          } else {
+            if (_.has(data, idOrKey)) {
+              _.set(data, idOrKey, _.merge(_.get(data, idOrKey), newData));
+              await self._save(name, data);
+              return _.get(data, idOrKey);
+            }
+            return null;
           }
-          return null;
-        }
+        });
       },
 
       updateSync: (idOrKey: number | string, newData: Partial<T> | any): T | any | null => {
@@ -292,22 +378,24 @@ export class JsonDB {
       },
 
       remove: async (idOrKey: number | string): Promise<boolean> => {
-        let data = await self._load<T>(name);
-        if (!data) return false;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) return false;
 
-        if (Array.isArray(data)) {
-          const arr = data as T[];
-          const newData = _.reject(arr, { id: idOrKey });
-          await self._save(name, newData);
-          return arr.length !== newData.length;
-        } else {
-          if (_.has(data, idOrKey)) {
-            _.unset(data, idOrKey);
-            await self._save(name, data);
-            return true;
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            const newData = _.reject(arr, { id: idOrKey });
+            await self._save(name, newData);
+            return arr.length !== newData.length;
+          } else {
+            if (_.has(data, idOrKey)) {
+              _.unset(data, idOrKey);
+              await self._save(name, data);
+              return true;
+            }
+            return false;
           }
-          return false;
-        }
+        });
       },
 
       removeSync: (idOrKey: number | string): boolean => {
@@ -330,16 +418,18 @@ export class JsonDB {
       },
 
       upsert: async (query: any, newData: Partial<T>): Promise<T | any> => {
-        if (_.isPlainObject(query) && (query as any).id) {
-          const existing = await this.findById((query as any).id);
+        return self._withLock(name, async () => {
+          if (_.isPlainObject(query) && (query as any).id) {
+            const existing = await this.findById((query as any).id);
+            return existing
+              ? await this.update((query as any).id, newData)
+              : await this.insert(newData as T);
+          }
+          const existing = await this.findOne(query);
           return existing
-            ? await this.update((query as any).id, newData)
+            ? await this.update((existing as any).id, newData)
             : await this.insert(newData as T);
-        }
-        const existing = await this.findOne(query);
-        return existing
-          ? await this.update((existing as any).id, newData)
-          : await this.insert(newData as T);
+        });
       },
 
       upsertSync: (query: any, newData: Partial<T>): T | any => {
@@ -356,8 +446,10 @@ export class JsonDB {
       },
 
       clear: async (asObject = false): Promise<boolean> => {
-        await self._save(name, asObject ? {} : []);
-        return true;
+        return self._withLock(name, async () => {
+          await self._save(name, asObject ? {} : []);
+          return true;
+        });
       },
 
       clearSync: (asObject = false): boolean => {
@@ -366,9 +458,11 @@ export class JsonDB {
       },
 
       delete: async (): Promise<boolean> => {
-        const filePath = path.join(self.basePath, `${name}.json`);
-        await fsp.unlink(filePath).catch(() => {});
-        return true;
+        return self._withLock(name, async () => {
+          const filePath = path.join(self.basePath, `${name}.json`);
+          await fsp.unlink(filePath).catch(() => {});
+          return true;
+        });
       },
 
       deleteSync: (): boolean => {
@@ -379,30 +473,32 @@ export class JsonDB {
         return true;
       },
 
-      // ----- Batch -----
+      // ----- Batch Operations (Write with Locking) -----
       bulkInsert: async (items: T[] | Record<string, any>[]): Promise<any[]> => {
-        let data = await self._load<T>(name);
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
 
-        if (!data) {
-          data = Array.isArray(items) && typeof items[0] === "object" && "id" in items[0] ? [] : {};
-        }
+          if (!data) {
+            data = Array.isArray(items) && typeof items[0] === "object" && "id" in items[0] ? [] : {};
+          }
 
-        if (Array.isArray(data)) {
-          const arr = data as T[];
-          let nextId = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
-          const inserted = (items as T[]).map(item => {
-            if (!item.id) (item as any).id = nextId++;
-            arr.push(item);
-            return item;
-          });
-          await self._save(name, arr);
-          return inserted;
-        } else {
-          const obj = data as Record<string, any>;
-          (items as Record<string, any>[]).forEach(item => Object.assign(obj, item));
-          await self._save(name, obj);
-          return items;
-        }
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            let nextId = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
+            const inserted = (items as T[]).map(item => {
+              if (!item.id) (item as any).id = nextId++;
+              arr.push(item);
+              return item;
+            });
+            await self._save(name, arr);
+            return inserted;
+          } else {
+            const obj = data as Record<string, any>;
+            (items as Record<string, any>[]).forEach(item => Object.assign(obj, item));
+            await self._save(name, obj);
+            return items;
+          }
+        });
       },
 
       bulkInsertSync: (items: T[] | Record<string, any>[]): any[] => {
@@ -430,7 +526,229 @@ export class JsonDB {
         }
       },
 
-      // ----- Utilities -----
+      // Bulk update multiple records by ID
+      bulkUpdate: async (updates: Array<{ id: number | string; data: Partial<T> }>): Promise<(T | null)[]> => {
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) return updates.map(() => null);
+
+          const results: (T | null)[] = [];
+
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            updates.forEach(({ id, data: updateData }) => {
+              const index = _.findIndex(arr, { id });
+              if (index !== -1) {
+                arr[index] = _.merge(arr[index], updateData);
+                results.push(arr[index]);
+              } else {
+                results.push(null);
+              }
+            });
+          } else {
+            const obj = data as Record<string, any>;
+            updates.forEach(({ id, data: updateData }) => {
+              if (_.has(obj, id)) {
+                _.set(obj, id, _.merge(_.get(obj, id), updateData));
+                results.push(_.get(obj, id));
+              } else {
+                results.push(null);
+              }
+            });
+          }
+
+          await self._save(name, data);
+          return results;
+        });
+      },
+
+      bulkUpdateSync: (updates: Array<{ id: number | string; data: Partial<T> }>): (T | null)[] => {
+        let data = self._loadSync<T>(name);
+        if (!data) return updates.map(() => null);
+
+        const results: (T | null)[] = [];
+
+        if (Array.isArray(data)) {
+          const arr = data as T[];
+          updates.forEach(({ id, data: updateData }) => {
+            const index = _.findIndex(arr, { id });
+            if (index !== -1) {
+              arr[index] = _.merge(arr[index], updateData);
+              results.push(arr[index]);
+            } else {
+              results.push(null);
+            }
+          });
+        } else {
+          const obj = data as Record<string, any>;
+          updates.forEach(({ id, data: updateData }) => {
+            if (_.has(obj, id)) {
+              _.set(obj, id, _.merge(_.get(obj, id), updateData));
+              results.push(_.get(obj, id));
+            } else {
+              results.push(null);
+            }
+          });
+        }
+
+        self._saveSync(name, data);
+        return results;
+      },
+
+      // Bulk remove multiple records by ID
+      bulkRemove: async (ids: (number | string)[]): Promise<boolean[]> => {
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) return ids.map(() => false);
+
+          const results: boolean[] = [];
+
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            const originalLength = arr.length;
+            ids.forEach(id => {
+              const initialLength = arr.length;
+              _.remove(arr, { id } as any);
+              results.push(arr.length < initialLength);
+            });
+          } else {
+            const obj = data as Record<string, any>;
+            ids.forEach(id => {
+              if (_.has(obj, id)) {
+                _.unset(obj, id);
+                results.push(true);
+              } else {
+                results.push(false);
+              }
+            });
+          }
+
+          await self._save(name, data);
+          return results;
+        });
+      },
+
+      bulkRemoveSync: (ids: (number | string)[]): boolean[] => {
+        let data = self._loadSync<T>(name);
+        if (!data) return ids.map(() => false);
+
+        const results: boolean[] = [];
+
+        if (Array.isArray(data)) {
+          const arr = data as T[];
+          ids.forEach(id => {
+            const initialLength = arr.length;
+            _.remove(arr, { id } as any);
+            results.push(arr.length < initialLength);
+          });
+        } else {
+          const obj = data as Record<string, any>;
+          ids.forEach(id => {
+            if (_.has(obj, id)) {
+              _.unset(obj, id);
+              results.push(true);
+            } else {
+              results.push(false);
+            }
+          });
+        }
+
+        self._saveSync(name, data);
+        return results;
+      },
+
+      // Bulk upsert - insert if not exists, update if exists
+      bulkUpsert: async (items: Array<{ query: any; data: Partial<T> }>): Promise<T[]> => {
+        return self._withLock(name, async () => {
+          const results: T[] = [];
+          let data = await self._load<T>(name);
+          
+          if (!data) {
+            data = [];
+          }
+
+          for (const { query, data: itemData } of items) {
+            if (Array.isArray(data)) {
+              const arr = data as T[];
+              let existing: T | undefined;
+              
+              if (_.isPlainObject(query) && (query as any).id) {
+                existing = _.find(arr, { id: (query as any).id });
+              } else {
+                existing = _.find(arr, query);
+              }
+
+              if (existing) {
+                // Update existing
+                const index = arr.indexOf(existing);
+                arr[index] = _.merge(arr[index], itemData);
+                results.push(arr[index]);
+              } else {
+                // Insert new
+                const newItem = itemData as T;
+                if (!newItem.id) {
+                  newItem.id = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
+                }
+                arr.push(newItem);
+                results.push(newItem);
+              }
+            } else {
+              // For object collections, merge the data
+              Object.assign(data, itemData);
+              results.push(itemData as T);
+            }
+          }
+
+          await self._save(name, data);
+          return results;
+        });
+      },
+
+      bulkUpsertSync: (items: Array<{ query: any; data: Partial<T> }>): T[] => {
+        const results: T[] = [];
+        let data = self._loadSync<T>(name);
+        
+        if (!data) {
+          data = [];
+        }
+
+        for (const { query, data: itemData } of items) {
+          if (Array.isArray(data)) {
+            const arr = data as T[];
+            let existing: T | undefined;
+            
+            if (_.isPlainObject(query) && (query as any).id) {
+              existing = _.find(arr, { id: (query as any).id });
+            } else {
+              existing = _.find(arr, query);
+            }
+
+            if (existing) {
+              // Update existing
+              const index = arr.indexOf(existing);
+              arr[index] = _.merge(arr[index], itemData);
+              results.push(arr[index]);
+            } else {
+              // Insert new
+              const newItem = itemData as T;
+              if (!newItem.id) {
+                newItem.id = arr.length ? (_.maxBy(arr, "id")?.id || 0) + 1 : 1;
+              }
+              arr.push(newItem);
+              results.push(newItem);
+            }
+          } else {
+            // For object collections, merge the data
+            Object.assign(data, itemData);
+            results.push(itemData as T);
+          }
+        }
+
+        self._saveSync(name, data);
+        return results;
+      },
+
+      // ----- Utilities (Read Operations - No Locking Needed) -----
       keys: async (): Promise<(string | number)[]> => {
         const data = await self._load<T>(name);
         return Array.isArray(data) ? data.map((r: any) => r.id) : Object.keys(data ?? {});
@@ -469,7 +787,7 @@ export class JsonDB {
         return Array.isArray(data) && data.length ? data[data.length - 1] : null;
       },
 
-      // ----- Deep path helpers -----
+      // ----- Deep path helpers (Write Operations with Locking) -----
       getIn: async (pathStr: string, defaultValue?: any): Promise<any> => {
         const data = await self._load<T>(name);
         return _.get(data, pathStr, defaultValue);
@@ -481,11 +799,13 @@ export class JsonDB {
       },
 
       setIn: async (pathStr: string, value: any): Promise<boolean> => {
-        let data = await self._load<T>(name);
-        if (!data) data = {};
-        _.set(data, pathStr, value);
-        await self._save(name, data);
-        return true;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) data = {};
+          _.set(data, pathStr, value);
+          await self._save(name, data);
+          return true;
+        });
       },
 
       setInSync: (pathStr: string, value: any): boolean => {
@@ -497,12 +817,14 @@ export class JsonDB {
       },
 
       mergeIn: async (pathStr: string, value: any): Promise<boolean> => {
-        let data = await self._load<T>(name);
-        if (!data) data = {};
-        const current = _.get(data, pathStr, {});
-        _.set(data, pathStr, _.merge(current, value));
-        await self._save(name, data);
-        return true;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) data = {};
+          const current = _.get(data, pathStr, {});
+          _.set(data, pathStr, _.merge(current, value));
+          await self._save(name, data);
+          return true;
+        });
       },
 
       mergeInSync: (pathStr: string, value: any): boolean => {
@@ -515,14 +837,16 @@ export class JsonDB {
       },
 
       pushIn: async (pathStr: string, value: any): Promise<boolean> => {
-        let data = await self._load<T>(name);
-        if (!data) data = {};
-        const arr = _.get(data, pathStr, []);
-        if (!Array.isArray(arr)) throw new Error(`Path ${pathStr} is not an array`);
-        arr.push(value);
-        _.set(data, pathStr, arr);
-        await self._save(name, data);
-        return true;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) data = {};
+          const arr = _.get(data, pathStr, []);
+          if (!Array.isArray(arr)) throw new Error(`Path ${pathStr} is not an array`);
+          arr.push(value);
+          _.set(data, pathStr, arr);
+          await self._save(name, data);
+          return true;
+        });
       },
 
       pushInSync: (pathStr: string, value: any): boolean => {
@@ -537,19 +861,21 @@ export class JsonDB {
       },
 
       pullIn: async (pathStr: string, predicate: any): Promise<any[]> => {
-        let data = await self._load<T>(name);
-        if (!data) data = {};
-        const arr = _.get(data, pathStr, []);
-        if (!Array.isArray(arr)) throw new Error(`Path ${pathStr} is not an array`);
-        const removed: any[] = [];
-        _.remove(arr, (val: any) => {
-          const match = typeof predicate === "function" ? predicate(val) : _.isMatch(val, predicate);
-          if (match) removed.push(val);
-          return match;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) data = {};
+          const arr = _.get(data, pathStr, []);
+          if (!Array.isArray(arr)) throw new Error(`Path ${pathStr} is not an array`);
+          const removed: any[] = [];
+          _.remove(arr, (val: any) => {
+            const match = typeof predicate === "function" ? predicate(val) : _.isMatch(val, predicate);
+            if (match) removed.push(val);
+            return match;
+          });
+          _.set(data, pathStr, arr);
+          await self._save(name, data);
+          return removed;
         });
-        _.set(data, pathStr, arr);
-        await self._save(name, data);
-        return removed;
       },
 
       pullInSync: (pathStr: string, predicate: any): any[] => {
@@ -569,13 +895,15 @@ export class JsonDB {
       },
 
       deleteIn: async (pathStr: string): Promise<boolean> => {
-        let data = await self._load<T>(name);
-        if (!data) return false;
-        const removed = _.unset(data, pathStr);
-        if (removed) {
-          await self._save(name, data);
-        }
-        return removed;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) return false;
+          const removed = _.unset(data, pathStr);
+          if (removed) {
+            await self._save(name, data);
+          }
+          return removed;
+        });
       },
 
       deleteInSync: (pathStr: string): boolean => {
@@ -589,13 +917,15 @@ export class JsonDB {
       },
 
       updateIn: async (pathStr: string, updater: (value: any) => any): Promise<any> => {
-        let data = await self._load<T>(name);
-        if (!data) data = {};
-        const current = _.get(data, pathStr);
-        const updated = updater(current);
-        _.set(data, pathStr, updated);
-        await self._save(name, data);
-        return updated;
+        return self._withLock(name, async () => {
+          let data = await self._load<T>(name);
+          if (!data) data = {};
+          const current = _.get(data, pathStr);
+          const updated = updater(current);
+          _.set(data, pathStr, updated);
+          await self._save(name, data);
+          return updated;
+        });
       },
 
       updateInSync: (pathStr: string, updater: (value: any) => any): any => {
