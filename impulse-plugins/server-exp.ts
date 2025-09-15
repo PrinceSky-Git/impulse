@@ -203,12 +203,9 @@ export class ExpSystem {
     let rewards = '';
     
     // For milestone levels, we could give special rewards
-    if (newLevel % 5 === 0) {
-      // Example: Give bonus EXP for milestone levels
-      const bonusExp = newLevel * 5;
-      await this.addExpRewards(userid, bonusExp, 'Level milestone bonus');
-      rewards = `You received a bonus of ${bonusExp} ${EXP_UNIT} for reaching a milestone level!`;
-    }
+	  if (newLevel % 10 === 0) {
+		  rewards = 'You have unlocked custom avatar. Use /customavatar request [ URL ] to get yourself a custom avatar.';
+	  }
     
     // Send popup notification to user
     user.popup(
@@ -227,22 +224,7 @@ export class ExpSystem {
       `</div>`
     );
     
-    // Check if user reached level 10 for avatar unlock notification
-    if (newLevel === 10) {
-      await AvatarRequestSystem.notifyAvatarUnlock(userid);
-    }
-    
     // For significant levels, we could announce in a room
-    if (newLevel % 10 === 0) {
-      const mainRoom = Rooms.get('lobby');
-      if (mainRoom) {
-        mainRoom.add(
-          `|html|<div class="broadcast-blue">` +
-          `<b>${Impulse.nameColor(userid, true, true)}</b> has reached <b>Level ${newLevel}</b>!` +
-          `</div>`
-        ).update();
-      }
-    }
   }
 
   static async checkDoubleExpStatus(room?: Room | null, user?: User) {
