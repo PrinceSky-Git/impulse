@@ -73,7 +73,7 @@ class AvatarRequestSystem {
 		const data = await db.pendingAvatarRequests.get() as PendingRequestData;
 		if (data && typeof data === 'object') {
 			delete data[toID(userid)];
-			await db.pendingAvatarRequests.set(data);
+			await db.pendingAvatarRequests.insert(data);
 		}
 	}
 
