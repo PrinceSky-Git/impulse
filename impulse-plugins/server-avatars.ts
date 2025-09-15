@@ -228,8 +228,7 @@ export const commands: Chat.ChatCommands = {
 			const table = Impulse.generateThemedTable(
 				'Pending Avatar Requests',
 				['User', 'Avatar', 'Action'],
-				tableData,
-				Impulse.nameColor('Staff', true, true)
+				tableData
 			);
 
 			this.sendReplyBox(table);
