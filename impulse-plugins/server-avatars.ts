@@ -226,12 +226,12 @@ export const commands: Chat.ChatCommands = {
 			]);
 
 			const table = Impulse.generateThemedTable(
-				'Pending Avatar Requests',
+				'Pending Avatar Requests<br>',
 				['User', 'Avatar', 'Action'],
 				tableData
 			);
 
-			this.sendReplyBox(table);
+			this.sendReplyBox(`<center><div class="pad ladder">${table}</div></center>`);
 		},
 
 		async deleterequest(this: CommandContext, target: string) {
