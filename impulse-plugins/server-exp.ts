@@ -11,14 +11,12 @@
 * Impulse.ExpSystem.addExp(this.user.id, 1); *
 *********************************************/
 
-import { AvatarRequestSystem } from './server-avatars';
-
 const DEFAULT_EXP = 0;
 const EXP_UNIT = `EXP`;
 Impulse.expUnit = EXP_UNIT;
 
-const MIN_LEVEL_EXP = 8;
-const MULTIPLIER = 1.3;
+const MIN_LEVEL_EXP = 7;
+const MULTIPLIER = 1.2;
 let DOUBLE_EXP = false;
 let DOUBLE_EXP_END_TIME: number | null = null;
 const EXP_COOLDOWN = 30000;
@@ -42,10 +40,6 @@ interface ExpData {
 
 interface CooldownData {
   [userid: string]: number;
-}
-
-interface LevelAchievementData {
-  [userid: string]: number[];
 }
 
 // Add config for double exp and other settings
@@ -101,47 +95,6 @@ export class ExpSystem {
   static async hasExp(userid: string, amount: number): Promise<boolean> {
     const exp = await this.readExp(userid);
     return exp >= amount;
-  }
-
-  static async hasLevel(userid: string, level: number): Promise<boolean> {
-    const exp = await this.readExp(userid);
-    const currentLevel = this.getLevel(exp);
-    return currentLevel >= level;
-  }
-
-  static async hasLevelOneTime(userid: string, level: number): Promise<boolean> {
-    const exp = await this.readExp(userid);
-    const currentLevel = this.getLevel(exp);
-    
-    // Check if user has the required level
-    if (currentLevel < level) {
-      return false;
-    }
-    
-    // Check if user has already claimed this level achievement
-    const achievements = await this.readLevelAchievements(userid);
-    return !achievements.includes(level);
-  }
-
-  static async claimLevelAchievement(userid: string, level: number): Promise<boolean> {
-    const canClaim = await this.hasLevelOneTime(userid, level);
-    if (!canClaim) {
-      return false;
-    }
-    
-    const achievements = await this.readLevelAchievements(userid);
-    achievements.push(level);
-    await this.writeLevelAchievements(userid, achievements);
-    return true;
-  }
-
-  private static async readLevelAchievements(userid: string): Promise<number[]> {
-    const data = await db.levelAchievements.get();
-    return data && typeof data === 'object' ? (data as LevelAchievementData)[toID(userid)] || [] : [];
-  }
-
-  private static async writeLevelAchievements(userid: string, achievements: number[]): Promise<void> {
-    await db.levelAchievements.insert(toID(userid), achievements);
   }
 
   static async addExp(userid: string, amount: number, reason?: string, by?: string): Promise<number> {
@@ -203,9 +156,12 @@ export class ExpSystem {
     let rewards = '';
     
     // For milestone levels, we could give special rewards
-	  if (newLevel % 10 === 0) {
-		  rewards = 'You have unlocked custom avatar. Use /customavatar request [ URL ] to get yourself a custom avatar.';
-	  }
+    if (newLevel % 5 === 0) {
+      // Example: Give bonus EXP for milestone levels
+      const bonusExp = newLevel * 5;
+      await this.addExpRewards(userid, bonusExp, 'Level milestone bonus');
+      rewards = `You received a bonus of ${bonusExp} ${EXP_UNIT} for reaching a milestone level!`;
+    }
     
     // Send popup notification to user
     user.popup(
@@ -225,6 +181,16 @@ export class ExpSystem {
     );
     
     // For significant levels, we could announce in a room
+    if (newLevel % 10 === 0) {
+      const mainRoom = Rooms.get('lobby');
+      if (mainRoom) {
+        mainRoom.add(
+          `|html|<div class="broadcast-blue">` +
+          `<b>${Impulse.nameColor(userid, true, true)}</b> has reached <b>Level ${newLevel}</b>!` +
+          `</div>`
+        ).update();
+      }
+    }
   }
 
   static async checkDoubleExpStatus(room?: Room | null, user?: User) {
@@ -360,199 +326,249 @@ export const pages: Chat.PageTable = {
 
 
 export const commands: Chat.Commands = {
-  exp: {
-    '': 'level',
-    async level(target, room, user) {
-      if (!target) target = user.name;
-      if (!this.runBroadcast()) return;    
-      const userid = toID(target);
-      const currentExp = await ExpSystem.readExp(userid);
-      const currentLevel = ExpSystem.getLevel(currentExp);
-      const nextLevelExp = ExpSystem.getExpForNextLevel(currentLevel + 1);
-      const expNeeded = nextLevelExp - currentExp;
+  level: 'exp',
+  async exp(target, room, user) {
+    if (!target) target = user.name;
+    if (!this.runBroadcast()) return;    
+    const userid = toID(target);
+    const currentExp = await ExpSystem.readExp(userid);
+    const currentLevel = ExpSystem.getLevel(currentExp);
+    const nextLevelExp = ExpSystem.getExpForNextLevel(currentLevel + 1);
+    const previousLevelExp = ExpSystem.getExpForNextLevel(currentLevel);
+    
+    const expInCurrentLevel = currentExp - previousLevelExp;
+    const expNeededForNextLevel = nextLevelExp - previousLevelExp;
+    const progressPercentage = Math.floor((expInCurrentLevel / expNeededForNextLevel) * 100);
+    const expNeeded = nextLevelExp - currentExp;
+    const executedBy = user.name === target ? '' : ` (Checked by ${Impulse.nameColor(user.name, true, true)})`;
+    
+    // Create a theme-neutral progress bar with better visibility on both light/dark themes
+    const progressBarHTML = 
+      `<div style="width: 200px; height: 18px; background: rgba(200, 200, 200, 0.2); border-radius: 10px; overflow: hidden; border: 1px solid rgba(150, 150, 150, 0.3); margin: 5px auto;">` +
+      `<div style="width: ${progressPercentage}%; height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);"></div>` +
+      `</div>`;
+    
+    // Create a more visually appealing EXP display with stats, ensuring proper string concatenation
+    this.sendReplyBox(
+      `<div style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.05)); border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); border: 1px solid rgba(125, 125, 125, 0.2);">` +
       
-      this.sendReplyBox(
-        `<b>${Impulse.nameColor(userid, true, true)}</b> - Level ${currentLevel}<br>` +
-        `Current EXP: ${currentExp} ${EXP_UNIT}<br>` +
-        `EXP needed for Level ${currentLevel + 1}: ${expNeeded} ${EXP_UNIT}`
+      // Name at the top
+      `<div style="text-align: center; margin-bottom: 8px;">` +
+      `<div style="font-size: 1.5em; font-weight: bold;">` +
+      `<span>${Impulse.nameColor(userid, true, false)}</span>` +
+      `</div>` +
+      `</div>` +
+      
+      // Level display
+      `<div style="text-align: center; margin-bottom: 10px;">` +
+      `<div style="font-size: 1.3em; font-weight: bold; display: inline-block; padding: 3px 12px; border-radius: 15px; background: linear-gradient(90deg, rgba(52, 152, 219, 0.2), rgba(155, 89, 182, 0.2)); color: #3498db;">` +
+      `Level ${currentLevel}` +
+      `</div>` +
+      `</div>` +
+      
+      // Progress bar
+      `<div style="margin: 12px 0;">` +
+      `${progressBarHTML}` +
+      `</div>` +
+      
+      // Completion percentage
+      `<div style="text-align: center; font-size: 0.9em; margin-bottom: 10px;">` +
+      `${progressPercentage}% complete` +
+      `</div>` +
+      
+      // Stats boxes
+      `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">` +
+      `<div style="background: rgba(150, 150, 150, 0.1); padding: 8px; border-radius: 8px; text-align: center;">` +
+      `<div style="font-size: 0.8em; opacity: 0.7;">Current EXP</div>` +
+      `<div style="font-weight: bold; color: #3498db;">${currentExp} ${EXP_UNIT}</div>` +
+      `</div>` +
+      `<div style="background: rgba(150, 150, 150, 0.1); padding: 8px; border-radius: 8px; text-align: center;">` +
+      `<div style="font-size: 0.8em; opacity: 0.7;">Needed for Level ${currentLevel + 1}</div>` +
+      `<div style="font-weight: bold; color: #e74c3c;">${expNeeded} ${EXP_UNIT}</div>` +
+      `</div>` +
+      `</div>` +
+      
+      `<div style="font-size: 0.8em; margin-top: 10px; text-align: center; opacity: 0.7;">` +
+      `Total progress: ${currentExp}/${nextLevelExp} ${EXP_UNIT}` +
+      `</div>` +
+      `</div>`
+    );
+  },
+
+  async giveexp(target, room, user) {
+    this.checkCan('globalban');
+    if (!target) return this.sendReply(`Usage: /giveexp [user], [amount], [reason]`);
+    const parts = target.split(',').map(p => p.trim());
+    if (parts.length < 2) return this.sendReply(`Usage: /giveexp [user], [amount], [reason]`);
+
+    const targetUser = Users.get(parts[0]);
+    const amount = parseInt(parts[1], 10);
+    const reason = parts.slice(2).join(',').trim() || 'No reason specified.';
+
+    if (!targetUser) {
+      return this.errorReply(`User "${parts[0]}" not found.`);
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return this.errorReply(`Please specify a valid positive amount.`);
+    }
+
+    await ExpSystem.addExp(targetUser.id, amount, reason, user.id);
+    const newExp = await ExpSystem.readExp(targetUser.id);
+    const newLevel = ExpSystem.getLevel(newExp);
+    const expForNext = ExpSystem.getExpForNextLevel(newLevel + 1);
+    
+    this.sendReplyBox(
+      `${Impulse.nameColor(user.name, true, true)} gave ${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''} to ${Impulse.nameColor(targetUser.name, true, true)} (${reason}). ` +
+      `New Level: ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
+    );
+    
+    this.modlog('GIVEEXP', targetUser, `${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''}`, { by: user.id, reason });
+    if (targetUser.connected) {
+      targetUser.popup(
+        `|html|You received <b>${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''}</b> from <b>${Impulse.nameColor(user.name, true, true)}</b>.<br>` +
+        `Reason: ${reason}<br>` +
+        `You are now Level ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
       );
-    },
+    }
+  },
 
-    async give(target, room, user) {
-      this.checkCan('globalban');
-      if (!target) return this.sendReply(`Usage: /exp give [user], [amount], [reason]`);
-      const parts = target.split(',').map(p => p.trim());
-      if (parts.length < 2) return this.sendReply(`Usage: /exp give [user], [amount], [reason]`);
+  async takeexp(target, room, user) {
+    this.checkCan('globalban');
+    if (!target) return this.sendReply(`Usage: /takeexp [user], [amount], [reason]`);
+    const parts = target.split(',').map(p => p.trim());
+    if (parts.length < 2) return this.sendReply(`Usage: /takeexp [user], [amount], [reason]`);
 
-      const targetUser = Users.get(parts[0]);
-      const amount = parseInt(parts[1], 10);
-      const reason = parts.slice(2).join(',').trim() || 'No reason specified.';
+    const targetUser = Users.get(parts[0]);
+    const amount = parseInt(parts[1], 10);
+    const reason = parts.slice(2).join(',').trim() || 'No reason specified.';
 
-      if (!targetUser) {
-        return this.errorReply(`User "${parts[0]}" not found.`);
-      }
-      if (isNaN(amount) || amount <= 0) {
-        return this.errorReply(`Please specify a valid positive amount.`);
-      }
+    if (!targetUser) {
+      return this.errorReply(`User "${parts[0]}" not found.`);
+    }
+    if (isNaN(amount) || amount <= 0) {
+      return this.errorReply(`Please specify a valid positive amount.`);
+    }
 
-      await ExpSystem.addExp(targetUser.id, amount, reason, user.id);
-      const newExp = await ExpSystem.readExp(targetUser.id);
-      const newLevel = ExpSystem.getLevel(newExp);
-      const expForNext = ExpSystem.getExpForNextLevel(newLevel + 1);
-      
-      this.sendReplyBox(
-        `${Impulse.nameColor(user.name, true, true)} gave ${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''} to ${Impulse.nameColor(targetUser.name, true, true)} (${reason}). ` +
-        `New Level: ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
+    await ExpSystem.takeExp(targetUser.id, amount, reason, user.id);
+    const newExp = await ExpSystem.readExp(targetUser.id);
+    const newLevel = ExpSystem.getLevel(newExp);
+    const expForNext = ExpSystem.getExpForNextLevel(newLevel + 1);
+    
+    this.sendReplyBox(
+      `${Impulse.nameColor(user.name, true, true)} took ${amount} ${EXP_UNIT} from ${Impulse.nameColor(targetUser.name, true, true)} (${reason}). ` +
+      `New Level: ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
+    );
+    
+    this.modlog('TAKEEXP', targetUser, `${amount} ${EXP_UNIT}`, { by: user.id, reason });
+    if (targetUser.connected) {
+      targetUser.popup(
+        `|html|<b>${Impulse.nameColor(user.name, true, true)}</b> took <b>${amount} ${EXP_UNIT}</b> from you.<br>` +
+        `Reason: ${reason}<br>` +
+        `You are now Level ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
       );
-      
-      this.modlog('GIVEEXP', targetUser, `${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''}`, { by: user.id, reason });
-      if (targetUser.connected) {
-        targetUser.popup(
-          `|html|You received <b>${amount} ${EXP_UNIT}${DOUBLE_EXP ? ' (Double EXP)' : ''}</b> from <b>${Impulse.nameColor(user.name, true, true)}</b>.<br>` +
-          `Reason: ${reason}<br>` +
-          `You are now Level ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
-        );
-      }
-    },
+    }
+  },
 
-    async take(target, room, user) {
-      this.checkCan('globalban');
-      if (!target) return this.sendReply(`Usage: /exp take [user], [amount], [reason]`);
-      const parts = target.split(',').map(p => p.trim());
-      if (parts.length < 2) return this.sendReply(`Usage: /exp take [user], [amount], [reason]`);
+  async resetexp(target, room, user) {
+    this.checkCan('globalban');
+    if (!target) return this.sendReply(`Usage: /resetexp [user], [reason]`);
+    const parts = target.split(',').map(p => p.trim());
+    const targetUser = Users.get(parts[0]);
+    const reason = parts.slice(1).join(',').trim() || 'No reason specified.';
 
-      const targetUser = Users.get(parts[0]);
-      const amount = parseInt(parts[1], 10);
-      const reason = parts.slice(2).join(',').trim() || 'No reason specified.';
+    if (!targetUser) {
+      return this.errorReply(`User "${parts[0]}" not found.`);
+    }
 
-      if (!targetUser) {
-        return this.errorReply(`User "${parts[0]}" not found.`);
-      }
-      if (isNaN(amount) || amount <= 0) {
-        return this.errorReply(`Please specify a valid positive amount.`);
-      }
-
-      await ExpSystem.takeExp(targetUser.id, amount, reason, user.id);
-      const newExp = await ExpSystem.readExp(targetUser.id);
-      const newLevel = ExpSystem.getLevel(newExp);
-      const expForNext = ExpSystem.getExpForNextLevel(newLevel + 1);
-      
-      this.sendReplyBox(
-        `${Impulse.nameColor(user.name, true, true)} took ${amount} ${EXP_UNIT} from ${Impulse.nameColor(targetUser.name, true, true)} (${reason}). ` +
-        `New Level: ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
+    await ExpSystem.writeExp(targetUser.id, DEFAULT_EXP);
+    this.sendReplyBox(
+      `${Impulse.nameColor(user.name, true, true)} reset ${Impulse.nameColor(targetUser.name, true, true)}'s EXP to ${DEFAULT_EXP} ${EXP_UNIT} (Level 0) (${reason}).`
+    );
+    
+    this.modlog('RESETEXP', targetUser, `${DEFAULT_EXP} ${EXP_UNIT}`, { by: user.id, reason });
+    if (targetUser.connected) {
+      targetUser.popup(
+        `|html|Your ${EXP_UNIT} has been reset to <b>${DEFAULT_EXP}</b> (Level 0) by <b>${Impulse.nameColor(user.name, true, true)}</b>.<br>` +
+        `Reason: ${reason}`
       );
-      
-      this.modlog('TAKEEXP', targetUser, `${amount} ${EXP_UNIT}`, { by: user.id, reason });
-      if (targetUser.connected) {
-        targetUser.popup(
-          `|html|<b>${Impulse.nameColor(user.name, true, true)}</b> took <b>${amount} ${EXP_UNIT}</b> from you.<br>` +
-          `Reason: ${reason}<br>` +
-          `You are now Level ${newLevel} (${newExp}/${expForNext} ${EXP_UNIT})`
-        );
-      }
-    },
+    }
+  },
 
-    async reset(target, room, user) {
-      this.checkCan('globalban');
-      if (!target) return this.sendReply(`Usage: /exp reset [user], [reason]`);
-      const parts = target.split(',').map(p => p.trim());
-      const targetUser = Users.get(parts[0]);
-      const reason = parts.slice(1).join(',').trim() || 'No reason specified.';
+  async resetexpall(target, room, user) {
+    this.checkCan('globalban');
+    const reason = target.trim() || 'No reason specified.';
 
-      if (!targetUser) {
-        return this.errorReply(`User "${parts[0]}" not found.`);
-      }
-
-      await ExpSystem.writeExp(targetUser.id, DEFAULT_EXP);
-      this.sendReplyBox(
-        `${Impulse.nameColor(user.name, true, true)} reset ${Impulse.nameColor(targetUser.name, true, true)}'s EXP to ${DEFAULT_EXP} ${EXP_UNIT} (Level 0) (${reason}).`
+    await ExpSystem.resetAllExp();
+    this.sendReplyBox(
+      `All user EXP has been reset to ${DEFAULT_EXP} ${EXP_UNIT} (Level 0) (${reason}).`
+    );
+    
+    this.modlog('RESETEXPALL', null, `all EXP to ${DEFAULT_EXP} ${EXP_UNIT}`, { by: user.id, reason });
+    if (room) {
+      room.add(
+        `|html|<center><div class="broadcast-blue">` +
+        `<b>${Impulse.nameColor(user.name, true, true)}</b> has reset all ${EXP_UNIT} to <b>${DEFAULT_EXP}</b> (Level 0).<br>` +
+        `Reason: ${reason}` +
+        `</div></center>`
       );
-      
-      this.modlog('RESETEXP', targetUser, `${DEFAULT_EXP} ${EXP_UNIT}`, { by: user.id, reason });
-      if (targetUser.connected) {
-        targetUser.popup(
-          `|html|Your ${EXP_UNIT} has been reset to <b>${DEFAULT_EXP}</b> (Level 0) by <b>${Impulse.nameColor(user.name, true, true)}</b>.<br>` +
-          `Reason: ${reason}`
-        );
-      }
-    },
+      room.update();
+    }
+  },
 
-    async resetall(target, room, user) {
-      this.checkCan('globalban');
-      const reason = target.trim() || 'No reason specified.';
-
-      await ExpSystem.resetAllExp();
-      this.sendReplyBox(
-        `All user EXP has been reset to ${DEFAULT_EXP} ${EXP_UNIT} (Level 0) (${reason}).`
-      );
-      
-      this.modlog('RESETEXPALL', null, `all EXP to ${DEFAULT_EXP} ${EXP_UNIT}`, { by: user.id, reason });
-      if (room) {
-        room.add(
-          `|html|<center><div class="broadcast-blue">` +
-          `<b>${Impulse.nameColor(user.name, true, true)}</b> has reset all ${EXP_UNIT} to <b>${DEFAULT_EXP}</b> (Level 0).<br>` +
-          `Reason: ${reason}` +
-          `</div></center>`
-        );
-        room.update();
-      }
-    },
-
-    async toggledouble(target, room, user) {
-      this.checkCan('globalban');
-      
-      if (!target) {
-        DOUBLE_EXP = !DOUBLE_EXP;
-        DOUBLE_EXP_END_TIME = null;
-        await ExpSystem.saveExpConfig();
-        await ExpSystem.checkDoubleExpStatus(room, user);
-        return;
-      }
-
-      if (target.toLowerCase() === 'off') {
-        DOUBLE_EXP = false;
-        DOUBLE_EXP_END_TIME = null;
-        await ExpSystem.saveExpConfig();
-        await ExpSystem.checkDoubleExpStatus(room, user);
-        return;
-      }
-
-      const match = target.match(/^(\d+)\s*(minute|hour|day)s?$/i);
-      if (!match) {
-        return this.errorReply('Invalid format. Use: number + unit (minutes/hours/days)');
-      }
-
-      const [, amount, unit] = match;
-      const duration = getDurationMs(parseInt(amount), unit.toLowerCase());
-      const endTime = Date.now() + duration;
-
-      DOUBLE_EXP = true;
-      DOUBLE_EXP_END_TIME = endTime;
-      
+  async toggledoubleexp(target, room, user) {
+    this.checkCan('globalban');
+    
+    if (!target) {
+      DOUBLE_EXP = !DOUBLE_EXP;
+      DOUBLE_EXP_END_TIME = null;
       await ExpSystem.saveExpConfig();
       await ExpSystem.checkDoubleExpStatus(room, user);
-      setTimeout(async () => await ExpSystem.checkDoubleExpStatus(), duration);
-    },
+      return;
+    }
 
-    async ladder(target, room, user) {
-      if (!this.runBroadcast()) return;
-      return this.parse(`/join view-expladder`);
-    },
-	  
-	  async help(target, room, user) {
-		  if (!this.runBroadcast()) return;
-		  this.sendReplyBox(
-			  `<div><b><center>EXP System Commands By ${Impulse.nameColor('Prince Sky', true, false)}</center></b><br>` +
-			  `<ul>` +
-			  `<li><code>/exp level [user]</code> (Or <code>/exp</code>) - Check your or another user's EXP, current level, and EXP needed for the next level.</li><br>` +
-			  `<li><code>/exp give [user], [amount], [reason]</code> - Give a specified amount of EXP to a user. (Requires: @ and higher)</li><br>` +
-			  `<li><code>/exp take [user], [amount], [reason]</code> - Take a specified amount of EXP from a user. (Requires: @ and higher)</li><br>` +
-			  `<li><code>/exp reset [user], [reason]</code> - Reset a user's EXP to ${DEFAULT_EXP}. (Requires: @ and higher)</li><br>` +
-			  `<li><code>/exp resetall [reason]</code> - Reset all users' EXP to ${DEFAULT_EXP}. (Requires: @ and higher)</li><br>` +
-			  `<li><code>/exp ladder</code> - View the top 100 users with the most EXP and their levels.</li><br>` +
-			  `<li><code>/exp toggledouble [duration]</code> - Toggle double EXP with optional duration (e.g., "2 hours", "1 day", "30 minutes"). Use "off" to disable. (Requires: @ and higher)</li>` +
-			  `</ul></div>`
-		  );
-	  },
+    if (target.toLowerCase() === 'off') {
+      DOUBLE_EXP = false;
+      DOUBLE_EXP_END_TIME = null;
+      await ExpSystem.saveExpConfig();
+      await ExpSystem.checkDoubleExpStatus(room, user);
+      return;
+    }
+
+    const match = target.match(/^(\d+)\s*(minute|hour|day)s?$/i);
+    if (!match) {
+      return this.errorReply('Invalid format. Use: number + unit (minutes/hours/days)');
+    }
+
+    const [, amount, unit] = match;
+    const duration = getDurationMs(parseInt(amount), unit.toLowerCase());
+    const endTime = Date.now() + duration;
+
+    DOUBLE_EXP = true;
+    DOUBLE_EXP_END_TIME = endTime;
+    
+    await ExpSystem.saveExpConfig();
+    await ExpSystem.checkDoubleExpStatus(room, user);
+    setTimeout(async () => await ExpSystem.checkDoubleExpStatus(), duration);
+  },
+
+  expladder(target, room, user) {
+    if (!this.runBroadcast()) return;
+    return this.parse(`/join view-expladder`);
+  },
+
+  exphelp(target, room, user) {
+    if (!this.runBroadcast()) return;
+    this.sendReplyBox(
+      `<div><b><center>EXP System Commands By ${Impulse.nameColor('Prince Sky', true, false)}</center></b><br>` +
+      `<ul>` +
+      `<li><code>/level [user]</code> (Or <code>/exp</code>) - Check your or another user's EXP, current level, and EXP needed for the next level.</li><br>` +
+      `<li><code>/giveexp [user], [amount], [reason]</code> - Give a specified amount of EXP to a user. (Requires: @ and higher)</li><br>` +
+      `<li><code>/takeexp [user], [amount], [reason]</code> - Take a specified amount of EXP from a user. (Requires: @ and higher)</li><br>` +
+      `<li><code>/resetexp [user], [reason]</code> - Reset a user's EXP to ${DEFAULT_EXP}. (Requires: @ and higher)</li><br>` +
+      `<li><code>/resetexpall [reason]</code> - Reset all users' EXP to ${DEFAULT_EXP}. (Requires: @ and higher)</li><br>` +
+      `<li><code>/expladder</code> - View the top 100 users with the most EXP and their levels.</li><br>` +
+      `<li><code>/toggledoubleexp [duration]</code> - Toggle double EXP with optional duration (e.g., "2 hours", "1 day", "30 minutes"). Use "off" to disable. (Requires: @ and higher)</li>` +
+      `</ul></div>`
+    );
   },
 };
