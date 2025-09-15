@@ -9,7 +9,7 @@ import { FS } from '../lib';
 // Change this to match your server's userlist color.
 const backgroundColor = 'rgba(248, 187, 217, 0.3)';
 const STAFF_ROOM_ID = 'staff';
-const DEFAULT_ICON_SIZE = 22;
+const DEFAULT_ICON_SIZE = 24;
 
 interface IconData {
 	url: string;
