@@ -222,13 +222,12 @@ export const commands: Chat.ChatCommands = {
 			const tableData = pendingRequests.map(([userid, url]) => [
 				Impulse.nameColor(userid, true, true),
 				`<img src='${url}' width='50' height='50'>`,
-				url,
 				`<button name="send" value="/customavatar set ${userid}, ${url}">Set Avatar</button>`
 			]);
 
 			const table = Impulse.generateThemedTable(
 				'Pending Avatar Requests',
-				['User', 'Avatar', 'URL', 'Action'],
+				['User', 'Avatar', 'Action'],
 				tableData,
 				Impulse.nameColor('Staff', true, true)
 			);
