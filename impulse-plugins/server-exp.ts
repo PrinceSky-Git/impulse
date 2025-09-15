@@ -373,7 +373,7 @@ export const pages: Chat.PageTable = {
 export const commands: Chat.Commands = {
   exp: {
     '': 'level',
-    level(target, room, user) {
+    async level(target, room, user) {
       if (!target) target = user.name;
       if (!this.runBroadcast()) return;    
       const userid = toID(target);
@@ -389,7 +389,7 @@ export const commands: Chat.Commands = {
       );
     },
 
-    give(target, room, user) {
+    async give(target, room, user) {
       this.checkCan('globalban');
       if (!target) return this.sendReply(`Usage: /exp give [user], [amount], [reason]`);
       const parts = target.split(',').map(p => p.trim());
@@ -426,7 +426,7 @@ export const commands: Chat.Commands = {
       }
     },
 
-    take(target, room, user) {
+    async take(target, room, user) {
       this.checkCan('globalban');
       if (!target) return this.sendReply(`Usage: /exp take [user], [amount], [reason]`);
       const parts = target.split(',').map(p => p.trim());
@@ -463,7 +463,7 @@ export const commands: Chat.Commands = {
       }
     },
 
-    reset(target, room, user) {
+    async reset(target, room, user) {
       this.checkCan('globalban');
       if (!target) return this.sendReply(`Usage: /exp reset [user], [reason]`);
       const parts = target.split(',').map(p => p.trim());
@@ -488,7 +488,7 @@ export const commands: Chat.Commands = {
       }
     },
 
-    resetall(target, room, user) {
+    async resetall(target, room, user) {
       this.checkCan('globalban');
       const reason = target.trim() || 'No reason specified.';
 
@@ -509,7 +509,7 @@ export const commands: Chat.Commands = {
       }
     },
 
-    toggledouble(target, room, user) {
+    async toggledouble(target, room, user) {
       this.checkCan('globalban');
       
       if (!target) {
@@ -545,12 +545,12 @@ export const commands: Chat.Commands = {
       setTimeout(async () => await ExpSystem.checkDoubleExpStatus(), duration);
     },
 
-    ladder(target, room, user) {
+    async ladder(target, room, user) {
       if (!this.runBroadcast()) return;
       return this.parse(`/join view-expladder`);
     },
 	  
-	  help(target, room, user) {
+	  async help(target, room, user) {
 		  if (!this.runBroadcast()) return;
 		  this.sendReplyBox(
 			  `<div><b><center>EXP System Commands By ${Impulse.nameColor('Prince Sky', true, false)}</center></b><br>` +
