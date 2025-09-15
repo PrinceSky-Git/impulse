@@ -11,6 +11,8 @@
 * Impulse.ExpSystem.addExp(this.user.id, 1); *
 *********************************************/
 
+import { AvatarRequestSystem } from './server-avatars';
+
 const DEFAULT_EXP = 0;
 const EXP_UNIT = `EXP`;
 Impulse.expUnit = EXP_UNIT;
@@ -224,6 +226,11 @@ export class ExpSystem {
       `</div>` +
       `</div>`
     );
+    
+    // Check if user reached level 10 for avatar unlock notification
+    if (newLevel === 10) {
+      await AvatarRequestSystem.notifyAvatarUnlock(userid);
+    }
     
     // For significant levels, we could announce in a room
     if (newLevel % 10 === 0) {
