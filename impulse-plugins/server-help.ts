@@ -8,7 +8,7 @@ export const commands: ChatCommands = {
 			`<ul><li><code>/clearallhelp</code> - Shows help for clear all commands</li><br>` +
 			`<li><code>/customavatarhelp</code> - Shows help for custom avatar commands</li><br>` +
 			`<li><code>/customcolorhelp</code> - Shows help for custom color commands</li><br>` +
-			`<li><code>/exphelp</code> - Shows help for experience/leveling commands</li><br>` +
+			`<li><code>/exp help</code> - Shows help for experience/leveling commands</li><br>` +
 			`<li><code>/emoticonshelp</code> - Shows help for emoticons commands</li><br>` +
 			`<li><code>/fmhelp</code> - Shows help for file management commands</li><br>` +
 			`<li><code>/help seen</code> - Shows help for seen commands</li><br>` +
