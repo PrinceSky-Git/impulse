@@ -70,11 +70,7 @@ class AvatarRequestSystem {
 	}
 
 	static async removePendingRequest(userid: string): Promise<void> {
-		const data = await db.pendingAvatarRequests.get() as PendingRequestData;
-		if (data && typeof data === 'object') {
-			delete data[toID(userid)];
-			await db.pendingAvatarRequests.insert(data);
-		}
+		await db.pendingAvatarRequests.remove(toID(userid));
 	}
 
 	static async getPendingRequests(): Promise<[string, string][]> {
@@ -94,7 +90,7 @@ class AvatarRequestSystem {
 			`|pm|~Avatar System|${user.getIdentity()}|/raw ` +
 			`<div style="border: 2px solid #3498db; padding: 15px; border-radius: 10px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">` +
 			`<div style="text-align: center;">` +
-			`<h3 style="color: #1976d2; margin-top: 0;">🎉 Avatar Request Unlocked! 🎉</h3>` +
+			`<h3 style="color: #1976d2; margin-top: 0;">ðŸŽ‰ Avatar Request Unlocked! ðŸŽ‰</h3>` +
 			`<div style="font-size: 1.1em; margin: 10px 0;">` +
 			`Congratulations on reaching <b style="color: #e74c3c;">Level 10</b>!` +
 			`</div>` +
@@ -103,7 +99,7 @@ class AvatarRequestSystem {
 			`<code style="background: #333; color: #fff; padding: 2px 4px; border-radius: 3px;">/customavatar request [image url]</code>` +
 			`</div>` +
 			`<div style="font-size: 0.9em; color: #666; font-style: italic;">` +
-			`⚠️ This is a <b>one-time only</b> request. Make sure your image is exactly what you want!<br>` +
+			`âš ï¸ This is a <b>one-time only</b> request. Make sure your image is exactly what you want!<br>` +
 			`Accepted formats: .jpg, .png, .gif` +
 			`</div>` +
 			`</div>` +
