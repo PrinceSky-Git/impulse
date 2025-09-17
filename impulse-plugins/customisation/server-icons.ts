@@ -4,7 +4,7 @@
 * Refactor and updates by Prince Sky.     *
 *******************************************/
 
-import { FS } from '../lib';
+import { FS } from '../../lib';
 
 // Change this to match your server's userlist color.
 const backgroundColor = 'rgba(248, 187, 217, 0.3)';
