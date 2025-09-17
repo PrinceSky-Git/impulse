@@ -6,7 +6,7 @@
 
 import * as crypto from 'crypto';
 import https from 'https';
-import { FS } from '../lib';
+import { FS } from '../../lib';
 
 interface RGB {
   R: number;
