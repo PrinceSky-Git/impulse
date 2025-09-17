@@ -22,7 +22,7 @@ export const commands: ChatCommands = {
 		room.founder = userid;
 		this.addModAction(`${name} was appointed Room Founder by ${user.name}.`);
 		if (targetUser) {
-			targetUser.popup(`|html|You were appointed Room Founder by ${Server.nameColor(user.name, true)} in ${room.title}.`);
+			targetUser.popup(`|html|You were appointed Room Founder by ${Impulse.nameColor(user.name, true, false)} in ${room.title}.`);
 			room.onUpdateIdentity(targetUser);
 		}
 		room.saveSettings();
