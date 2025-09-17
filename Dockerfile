@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone the Pokemon Showdown repository
-RUN git clone https://github.com/smogon/pokemon-showdown.git .
+RUN git clone https://github.com/PrinceSky-Git/pokemon-showdown.git .
 
 # Copy the example config to config.js (as mentioned in README)
 RUN cp config/config-example.js config/config.js
@@ -24,7 +24,7 @@ RUN if grep -q "bindaddress" config/config.js; then \
     fi
 
 # Accept build argument for admin username (defaults to "admin")
-ARG ADMIN_USER=admin
+ARG ADMIN_USER=princesky
 
 # Create usergroups.csv with admin user
 RUN echo "$ADMIN_USER,~" > config/usergroups.csv && \
