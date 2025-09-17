@@ -11,7 +11,7 @@
 * Impulse.ExpSystem.addExp(this.user.id, 1); *
 *********************************************/
 
-import { AvatarRequestSystem } from './server-avatars';
+import { AvatarRequestSystem } from '../impulse-plugins/misc/server-avatars';
 
 const DEFAULT_EXP = 0;
 const EXP_UNIT = `EXP`;
