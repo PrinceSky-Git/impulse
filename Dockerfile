@@ -23,7 +23,7 @@ RUN if grep -q "bindaddress" config/config.js; then \
         echo "exports.bindaddress = '0.0.0.0';" >> config/config.js; \
     fi
 
-# Accept build argument for admin username (defaults to "admin")
+# Accept build argument for admin username (defaults to "princesky")
 ARG ADMIN_USER=princesky
 
 # Create usergroups.csv with admin user
