@@ -4,7 +4,7 @@
 * Updated To Typescript By: Prince Sky    *
 *******************************************/
 
-import { FS } from '../lib/fs';
+import { FS } from '../../lib';
 
 const AVATAR_PATH = 'config/avatars/';
 const STAFF_ROOM_ID = 'staff';
