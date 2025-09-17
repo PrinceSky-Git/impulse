@@ -110,8 +110,7 @@ class AvatarRequestSystem {
 
 initializeAvatars();
 
-// Export AvatarRequestSystem to be used by the EXP system
-export { AvatarRequestSystem };
+Impulse.AvatarRequestSystem = AvatarRequestSystem;
 
 export const commands: Chat.ChatCommands = {
 	customavatar: {
