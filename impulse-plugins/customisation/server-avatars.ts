@@ -85,9 +85,10 @@ class AvatarRequestSystem {
 		
 		const hasUsedRequest = await this.hasUsedRequest(userid);
 		if (hasUsedRequest) return; // Don't notify if they already used their request
-		
-		user.popup(
-			`|html|<center><p><strong>Avatar Request Unlocked!</strong></p></center>` +
+
+		user.send(
+			`|pm|~Avatar System|${user.getIdentity()}|/raw ` +
+			`<p><strong> Avatar Request Unlocked! </strong></p>` +
 			`<p>Congratulations on reaching <strong>Level 10</strong>!</p>` +
 			`<p>You can now request a <strong>custom avatar</strong> using:</p>` +
 			`<p><code>/customavatar request [image url]</code></p>` +
