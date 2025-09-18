@@ -24,7 +24,7 @@ RUN if grep -q "bindaddress" config/config.js; then \
     fi
 
 # Accept build argument for admin username (defaults to "princesky")
-ARG ADMIN_USER=princesky
+ARG ADMIN_USER=turborx
 
 # Create usergroups.csv with admin user
 RUN echo "$ADMIN_USER,~" > config/usergroups.csv && \
