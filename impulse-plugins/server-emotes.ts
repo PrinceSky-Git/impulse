@@ -20,18 +20,18 @@ function getEmoteSize(): string {
 function parseMessage(message: string): string {
 	if (message.substr(0, 5) === "/html") {
 		message = message.substr(5);
-		message = message.replace(/\_\_([^< ](?:[^<]*?[^< ])?)\_\_(?![^<]*?<\/a)/g, '<i>$1</i>'); // italics
-		message = message.replace(/\*\*([^< ](?:[^<]*?[^< ])?)\*\*/g, '<b>$1</b>'); // bold
-		message = message.replace(/\~\~([^< ](?:[^<]*?[^< ])?)\~\~/g, '<strike>$1</strike>'); // strikethrough
-		message = message.replace(/&lt;&lt;([a-z0-9-]+)&gt;&gt;/g, '&laquo;<a href="/$1" target="_blank">$1</a>&raquo;'); // <<roomid>>
-		message = Autolinker.link(message.replace(/&#x2f;/g, '/'), { stripPrefix: false, phone: false, twitter: false });
+		message = message.replace(/\_\_([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\_\_(?![^&lt;]*?&lt;\/a)/g, '&lt;i&gt;$1&lt;/i&gt;'); // italics
+		message = message.replace(/\*\*([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\*\*/g, '&lt;b&gt;$1&lt;/b&gt;'); // bold
+		message = message.replace(/\~\~([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\~\~/g, '&lt;strike&gt;$1&lt;/strike&gt;'); // strikethrough
+		message = message.replace(/&amp;lt;&amp;lt;([a-z0-9-]+)&amp;gt;&amp;gt;/g, '&amp;laquo;&lt;a href="/$1" target="_blank"&gt;$1&lt;/a&gt;&amp;raquo;'); // &lt;&lt;roomid&gt;&gt;
+		message = Autolinker.link(message.replace(/&amp;#x2f;/g, '/'), { stripPrefix: false, phone: false, twitter: false });
 		return message;
 	}
-	message = Chat.escapeHTML(message).replace(/&#x2f;/g, '/');
-	message = message.replace(/\_\_([^< ](?:[^<]*?[^< ])?)\_\_(?![^<]*?<\/a)/g, '<i>$1</i>'); // italics
-	message = message.replace(/\*\*([^< ](?:[^<]*?[^< ])?)\*\*/g, '<b>$1</b>'); // bold
-	message = message.replace(/\~\~([^< ](?:[^<]*?[^< ])?)\~\~/g, '<strike>$1</strike>'); // strikethrough
-	message = message.replace(/&lt;&lt;([a-z0-9-]+)&gt;&gt;/g, '&laquo;<a href="/$1" target="_blank">$1</a>&raquo;'); // <<roomid>>
+	message = Chat.escapeHTML(message).replace(/&amp;#x2f;/g, '/');
+	message = message.replace(/\_\_([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\_\_(?![^&lt;]*?&lt;\/a)/g, '&lt;i&gt;$1&lt;/i&gt;'); // italics
+	message = message.replace(/\*\*([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\*\*/g, '&lt;b&gt;$1&lt;/b&gt;'); // bold
+	message = message.replace(/\~\~([^&lt; ](?:[^&lt;]*?[^&lt; ])?)\~\~/g, '&lt;strike&gt;$1&lt;/strike&gt;'); // strikethrough
+	message = message.replace(/&amp;lt;&amp;lt;([a-z0-9-]+)&amp;gt;&amp;gt;/g, '&amp;laquo;&lt;a href="/$1" target="_blank"&gt;$1&lt;/a&gt;&amp;raquo;'); // &lt;&lt;roomid&gt;&gt;
 	message = Autolinker.link(message, { stripPrefix: false, phone: false, twitter: false });
 	return message;
 }
@@ -41,8 +41,8 @@ function escapeRegExp(str: string): string {
 	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"); // eslint-disable-line no-useless-escape
 }
 
-let emoticons: EmoticonData = { "lmao": "https://cdn3.emoji.gg/emojis/32868-pepe-lmfaoooo.gif" };
-let emoteRegex: RegExp = new RegExp("lmao", "g");
+let emoticons: EmoticonData = { "LMAO": "https://cdn3.emoji.gg/emojis/32868-pepe-lmfaoooo.gif" };
+let emoteRegex: RegExp = new RegExp(Object.keys(emoticons).map(escapeRegExp).join('|'), "gi");
 Impulse.ignoreEmotes = {} as IgnoreEmotesData;
 
 // Load ignore emotes from database
@@ -59,13 +59,18 @@ function loadEmoticons(): void {
 	try {
 		const emoticonsData = db.emoticons.valuesSync() as EmoticonData;
 		if (emoticonsData && Object.keys(emoticonsData).length > 0) {
-			emoticons = emoticonsData;
+			// Convert all keys to uppercase for consistency
+			const newEmoticons: EmoticonData = {};
+			for (const key in emoticonsData) {
+				newEmoticons[key.toUpperCase()] = emoticonsData[key];
+			}
+			emoticons = newEmoticons;
 		}
 		const emoteArray: string[] = [];
 		for (const emote in emoticons) {
 			emoteArray.push(escapeRegExp(emote));
 		}
-		emoteRegex = new RegExp(`(${emoteArray.join('|')})`, 'g');
+		emoteRegex = new RegExp(`(${emoteArray.join('|')})`, 'gi');
 	} catch (e) {
 		// Ignore errors during loading
 	}
@@ -79,14 +84,15 @@ function saveEmoticons(): void {
 	for (const emote in emoticons) {
 		emoteArray.push(escapeRegExp(emote));
 	}
-	emoteRegex = new RegExp(`(${emoteArray.join('|')})`, 'g');
+	emoteRegex = new RegExp(`(${emoteArray.join('|')})`, 'gi');
 }
 
 function parseEmoticons(message: string, room?: Room): string | false {
 	if (emoteRegex.test(message)) {
 		const emoteSize = getEmoteSize();
 		message = Impulse.parseMessage(message).replace(emoteRegex, (match: string): string => {
-			return `<img src="${emoticons[match]}" title="${match}" height="${emoteSize}" width="${emoteSize}">`;
+			const emoteKey = match.toUpperCase();
+			return `<img src="${emoticons[emoteKey]}" title="${emoteKey}" height="${emoteSize}" width="${emoteSize}">`;
 		});
 		return message;
 	}
@@ -127,12 +133,13 @@ export const commands: ChatCommands = {
 
 			if (!targetSplit[1]) return this.parse("/emoticonshelp");
 			if (targetSplit[0].length > 10) return this.errorReply("Emoticons may not be longer than 10 characters.");
-			if (emoticons[targetSplit[0]]) return this.errorReply(`${targetSplit[0]} is already an emoticon.`);
+			const emoteKey = targetSplit[0].toUpperCase();
+			if (emoticons[emoteKey]) return this.errorReply(`${emoteKey} is already an emoticon.`);
 
-			emoticons[targetSplit[0]] = targetSplit[1];
+			emoticons[emoteKey] = targetSplit[1];
 			saveEmoticons();
 
-			this.sendReply(`|raw|The emoticon ${Chat.escapeHTML(targetSplit[0])} has been added: <img src="${targetSplit[1]}" width="40" height="40">`);
+			this.sendReply(`|raw|The emoticon ${Chat.escapeHTML(emoteKey)} has been added: <img src="${targetSplit[1]}" width="40" height="40">`);
 		},
 
 		delete: "del",
@@ -142,9 +149,10 @@ export const commands: ChatCommands = {
 			room = this.requireRoom();
 			this.checkCan('ban', null, room);
 			if (!target) return this.parse("/emoticonshelp");
-			if (!emoticons[target]) return this.errorReply("That emoticon does not exist.");
+			const emoteKey = target.toUpperCase();
+			if (!emoticons[emoteKey]) return this.errorReply("That emoticon does not exist.");
 
-			delete emoticons[target];
+			delete emoticons[emoteKey];
 			saveEmoticons();
 
 			this.sendReply("That emoticon has been removed.");
@@ -246,7 +254,9 @@ export const commands: ChatCommands = {
 			'<li><code>/emoticon size [size]</code> - Sets the size of emoticons (16-256px). (Requires: @, &, #, ~)</li><br>' +
 			'<li><code>/randemote</code> - Randomly sends an emote from the emoticon list.</li><br>' +
 			'<li><code>/emoticon help</code> - Displays this help command.</li>' +
-			'</ul></div>'
+			'</ul>' +
+			'</div>'
 		);
 	},
 };
+				
