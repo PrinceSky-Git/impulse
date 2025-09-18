@@ -125,7 +125,7 @@ export const commands: Chat.ChatCommands = {
 			
 			const targetUser = Users.get(userId);
 			if (targetUser) {
-				targetUser.popup(`|html|${Impulse.nameColor(user.name, true, true)} set your custom avatar.<p><img src='${processedUrl}' width='80' height='80'></p>`);
+				targetUser.popup(`|html|${Impulse.nameColor(user.name, true, true)} set your custom avatar.<p><img src='${processedUrl}' width='80' height='80'></p><p>Check PM for instructions!</p>`);
 			}
 			this.parse(`/personalavatar ${userId},${Config.customavatars[userId]}`);
 			
@@ -188,7 +188,6 @@ export const commands: Chat.ChatCommands = {
 			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
 				staffRoom.add(`|html|<div class="infobox"><center><strong>Avatar Request from ${Impulse.nameColor(this.user.name, true, true)}</strong><br>` +
-					`Level 10+ user requesting custom avatar:<br>` +
 					`<img src='${processedUrl}' width='80' height='80'><br>` +
 					`<button name="send" value="/customavatar set ${toID(this.user.name)}, ${processedUrl}">Set Avatar</button></center></div>`).update();
 			}
