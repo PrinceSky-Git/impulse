@@ -201,12 +201,12 @@ export class ExpSystem {
     let rewards = '';
     
     // For milestone levels, we could give special rewards
-    if (newLevel % 5 === 0) {
+    /*if (newLevel % 5 === 0) {
       // Example: Give bonus EXP for milestone levels
       const bonusExp = newLevel * 5;
       await this.addExpRewards(userid, bonusExp, 'Level milestone bonus');
       rewards = `You received a bonus of ${bonusExp} ${EXP_UNIT} for reaching a milestone level!`;
-    }
+    }*/
     
     // Send popup notification to user
     user.popup(
@@ -225,13 +225,13 @@ export class ExpSystem {
       `</div>`
     );
     
-    // Check if user reached level 10 for avatar unlock notification
-    if (newLevel === 10) {
+    // Check if user reached level 25 for avatar unlock notification
+    if (newLevel === 25) {
       await Impulse.AvatarRequestSystem.notifyAvatarUnlock(userid);
     }
     
     // For significant levels, we could announce in a room
-    if (newLevel % 10 === 0) {
+    /*if (newLevel % 10 === 0) {
       const mainRoom = Rooms.get('lobby');
       if (mainRoom) {
         mainRoom.add(
@@ -240,7 +240,7 @@ export class ExpSystem {
           `</div>`
         ).update();
       }
-    }
+    }*/
   }
 
   static async checkDoubleExpStatus(room?: Room | null, user?: User) {
@@ -367,8 +367,7 @@ export const pages: Chat.PageTable = {
     const output = Impulse.generateThemedTable(
       `Top ${richest.length} Users by ${EXP_UNIT}`,
       ['Rank', 'User', 'EXP', 'Level', 'Next Level At'],
-      data,
-      Impulse.nameColor('TurboRx', true, true)
+      data
     );
     return `<div class="pad ladder">${output}</div>`;
   },
