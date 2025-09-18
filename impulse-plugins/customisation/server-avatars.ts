@@ -1,7 +1,7 @@
 /******************************************
 * Pokemon Showdown Custom Avatar Commands *
 * Original Code By: CreatePhil And Others *
-* Refactor: Prince Sky                    *
+* Refactor By: Prince Sky.                *
 *******************************************/
 
 import { FS } from '../../lib';
@@ -128,7 +128,7 @@ export const commands: Chat.ChatCommands = {
 			}
 			this.parse(`/personalavatar ${userId},${Config.customavatars[userId]}`);
 			
-			const staffRoom = Rooms.get(STAFF_ROOM_ID);
+			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
 				staffRoom.add(`|html|<div class="infobox"><strong>${Impulse.nameColor(user.name, true, true)} set custom avatar for ${Impulse.nameColor(userId, true, false)}:</strong> <img src='${processedUrl}' width='80' height='80'></div>`).update();
 			}
@@ -151,7 +151,7 @@ export const commands: Chat.ChatCommands = {
 				}
 				this.sendReply(`${target}'s avatar has been removed.`);
 				
-				const staffRoom = Rooms.get(STAFF_ROOM_ID);
+				let staffRoom = Rooms.get(STAFF_ROOM_ID);
 				if (staffRoom) {
 					staffRoom.add(`|html|<div class="infobox"><strong>${Impulse.nameColor(this.user.name, true, true)} deleted custom avatar for ${Impulse.nameColor(userId, true, false)}.</strong></div>`).update(); 
 				}
@@ -184,8 +184,7 @@ export const commands: Chat.ChatCommands = {
 			await AvatarRequestSystem.markRequestUsed(this.user.id);
 			await AvatarRequestSystem.addPendingRequest(this.user.id, processedUrl);
 
-			const staffRoom = Rooms.get(STAFF_ROOM_ID);
-			const staffRoom = Rooms.get(STAFF_ROOM_ID);
+			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
 				staffRoom.add(`|html|<div class="infobox"><strong>Avatar Request from ${Impulse.nameColor(this.user.name, true, true)}</strong><br>` +
 					`Level 10+ user requesting custom avatar:<br>` +
@@ -228,7 +227,7 @@ export const commands: Chat.ChatCommands = {
 			
 			this.sendReply(`Deleted avatar request for ${target}.`);
 			
-			const staffRoom = Rooms.get(STAFF_ROOM_ID);
+			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
 				staffRoom.add(`|html|<div class="infobox"><strong>${Impulse.nameColor(this.user.name, true, true)} deleted avatar request for ${Impulse.nameColor(userid, true, false)}.</strong></div>`).update();
 			}
