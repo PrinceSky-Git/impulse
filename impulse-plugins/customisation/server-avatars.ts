@@ -87,7 +87,7 @@ class AvatarRequestSystem {
 		if (hasUsedRequest) return; // Don't notify if they already used their request
 		
 		user.popup(
-			`|html|<p><strong>🎉 Avatar Request Unlocked! 🎉</strong></p>` +
+			`|html|<center><p><strong>Avatar Request Unlocked!</strong></p></center>` +
 			`<p>Congratulations on reaching <strong>Level 10</strong>!</p>` +
 			`<p>You can now request a <strong>custom avatar</strong> using:</p>` +
 			`<p><code>/customavatar request [image url]</code></p>` +
@@ -130,7 +130,7 @@ export const commands: Chat.ChatCommands = {
 			
 			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
-				staffRoom.add(`|html|<div class="infobox"><strong>${Impulse.nameColor(user.name, true, true)} set custom avatar for ${Impulse.nameColor(userId, true, false)}:</strong> <img src='${processedUrl}' width='80' height='80'></div>`).update();
+				staffRoom.add(`|html|<div class="infobox"><center><strong>${Impulse.nameColor(user.name, true, true)} set custom avatar for ${Impulse.nameColor(userId, true, false)}:</strong><br><img src='${processedUrl}' width='80' height='80'></center></div>`).update();
 			}
 		},
 		
@@ -186,10 +186,10 @@ export const commands: Chat.ChatCommands = {
 
 			let staffRoom = Rooms.get(STAFF_ROOM_ID);
 			if (staffRoom) {
-				staffRoom.add(`|html|<div class="infobox"><strong>Avatar Request from ${Impulse.nameColor(this.user.name, true, true)}</strong><br>` +
+				staffRoom.add(`|html|<div class="infobox"><center><strong>Avatar Request from ${Impulse.nameColor(this.user.name, true, true)}</strong><br>` +
 					`Level 10+ user requesting custom avatar:<br>` +
 					`<img src='${processedUrl}' width='80' height='80'><br>` +
-					`Use: <code>/customavatar set ${toID(this.user.name)}, ${processedUrl}</code></div>`).update();
+					`<button name="send" value="/customavatar set ${toID(this.user.name)}, ${processedUrl}">Set Avatar</button></center></div>`).update();
 			}
 
 			this.sendReply('Your avatar request has been submitted to staff for review. You cannot request another avatar.');
